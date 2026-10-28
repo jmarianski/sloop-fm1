@@ -149,14 +149,17 @@ static int uh_hub_probe(uint8_t addr, uint8_t mps, uint8_t cfgval, uh_midi_t *m)
 
 /* The device at address 0 (just reset): give it an address, read its configuration, and if it has a USB-MIDI
  * streaming interface select it. 1 = found, 0 = no (including a hub below depth 0 and a device that fails). */
+static uint8_t uh_answered;                             /* uh_probe: the device answered its first request */
 static int uh_probe(uint8_t depth, uh_midi_t *m)
 {
     uint8_t d8[8], mps, cls, addr = uh.next_addr++;
     uint32_t total;
     int r;
+    uh_answered = 0;
     r = uh_ctl(0, 0x80, 6, 0x0100, 0, 8, d8, 8);        /* GET_DESCRIPTOR(device), first 8 bytes */
     if (r < 8)
         return 0;
+    uh_answered = 1;
     mps = d8[7] == 16u || d8[7] == 32u || d8[7] == 64u ? d8[7] : 8u;
     cls = d8[4];
     if (uh_ctl(0, 0x00, 5, addr, 0, 0, 0, mps) < 0)     /* SET_ADDRESS */
@@ -323,18 +326,27 @@ static void uh_host_up(void)
 static void uh_connect(void)
 {
     uh_midi_t m;
+    uint32_t k;
+    int ok = 0;
     if (sie_rd(S_DEVCTL) & 0x20u) {                     /* low speed (FSDev is bit 6, LSDev bit 5) */
         if (!uh.tried)
             uh.msg = UH_MSG_LOW;                        /* said once per attach, as NO MIDI is */
         uh.tried = 1;
         return;
     }
-    sie_wr(S_POWER, 0x08u);                             /* bus reset */
-    uh_wait(30);
-    sie_wr(S_POWER, 0);
-    uh_wait(30);
-    uh.next_addr = UH_FIRST_ADDR;
-    if (uh_probe(0, &m)) {
+    /* Up to three resets, the recovery longer each time: a high-speed device (NUX NEK-100) tries its chirp after
+     * the reset and did not answer 30 ms later; 100 ms is enough for it. A device that answers is not tried again. */
+    for (k = 0; k < 3u; k++) {
+        sie_wr(S_POWER, 0x08u);                         /* bus reset */
+        uh_wait(50);
+        sie_wr(S_POWER, 0);
+        uh_wait(100u + 200u * k);
+        uh.next_addr = UH_FIRST_ADDR;
+        ok = uh_probe(0, &m);
+        if (ok || uh_answered)
+            break;
+    }
+    if (ok) {
         uh_start_ep(&m);
         uh.msg = UH_MSG_MIDI;
         uh.tried = 0;
