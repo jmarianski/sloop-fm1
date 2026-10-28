@@ -24,7 +24,7 @@
  * needs outside power, e.g. a powered hub), low-speed devices. OUT drains the existing MIDI output queue only
  * after the target ACKs; no SysEx/editor traffic is sent to attached devices.
  * Host OUT has SIE-model coverage (tests/usb_host_test.c); physical validation of this port is pending: see
- * docs/USB_HOST.md. SLOOP: the menu's USB PORT (GLO > MIDI 2, ui_input.c) asks for the mode, the main loop calls
+ * USB_HOST.md. SLOOP: GLO > USB > PORT (ui_input.c) asks for the mode, the main loop calls
  * usb_host_task; what a controller plays comes in on cable 0, as from a computer. */
 #if FELUCCA_USB_HOST
 #include "usb_host_desc.h"
