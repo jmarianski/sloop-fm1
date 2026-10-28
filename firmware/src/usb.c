@@ -18,8 +18,19 @@
  * phones and apps that only take 48 kHz: the host picks the rate with SET_CUR (two discrete rates in the one alt
  * setting). The engines stay at 44.1 kHz; at 48 kHz uac_tap48 resamples (a polyphase FIR 160 / 147, uac_fir.h:
  * 12 taps a phase, Q15, Felucca's 24 x Q30 made smaller) into the ring. 44.1 kHz, the rate until a host asks
- * for another, sends the samples as before, bit for bit. */
+ * for another, sends the samples as before, bit for bit.
+ * FELUCCA_USB_HOST=1 (SLOOP 2.9, after felucca-bsp's pull request #7: Melodee's host by Adrien Tibi and Kerem Kilic)
+ * adds the MIDI host: the port becomes the host of a USB-MIDI controller or synth when the menu asks for it
+ * (usb_host.c; the main loop's contract in docs/USB_HOST.md). Every start is a device again; the loader never
+ * has it. */
 #include "../hal/fm1_usb.h"   /* registers; relative, so the loader and the host tests find it too */
+#ifndef FELUCCA_USB_HOST
+#define FELUCCA_USB_HOST 0
+#endif
+#ifdef FELUCCA_LOADER
+#undef FELUCCA_USB_HOST
+#define FELUCCA_USB_HOST 0
+#endif
 #ifndef FELUCCA_CDC
 #define FELUCCA_CDC 0
 #endif
@@ -161,13 +172,37 @@ static uint32_t midi_in_q[MQ], midi_out_q[MQ];
 static volatile uint32_t mi_w, mi_r, mo_w, mo_r;
 static volatile uint8_t midi_in_lost;               /* (2.8.3) a note message did not fit: seq.c ends the MIDI notes held
                                                      * (a lost note-off must not leave a note stuck; after Melodee 1.5) */
-static void midi_out_event(uint32_t pkt)            /* from the audio ISR */
+static volatile uint8_t midi_usb_lost;              /* (2.9) the USB session ended (host mode): seq.c ends what it held */
+static volatile uint32_t midi_links;                /* (2.9) counts up at each new connection, computer or device */
+static uint32_t usb_retry_ms;
+static int usb_midi_out_ready(void);
+/* one event packet to the out ring, 0 when nothing listens or it is full (from the audio ISR) */
+static int midi_out_try(uint32_t pkt)
 {
-    if (usb.config && mo_w - mo_r < MQ) {
-        midi_out_q[mo_w % MQ] = pkt;
-        RING_PUBLISH();
-        mo_w++;
+    if (!usb_midi_out_ready() || mo_w - mo_r >= MQ)
+        return 0;
+    midi_out_q[mo_w % MQ] = pkt;
+    RING_PUBLISH();
+    mo_w++;
+    return 1;
+}
+static void midi_out_event(uint32_t pkt) { (void)midi_out_try(pkt); }
+static uint32_t midi_out_room(void) { return usb_midi_out_ready() ? MQ - (mo_w - mo_r) : 0u; }
+static uint32_t midi_out_link(void) { return midi_links; }
+/* (2.9) a filtered event from the host port (usb_host.c) into the MIDI ring, as ep1_take puts a computer's;
+ * a lost note message ends the MIDI notes held, as midi_in_event does */
+static int midi_enqueue(uint32_t pkt, uint32_t source)
+{
+    (void)source;
+    if (mi_w - mi_r >= MQ) {
+        if ((pkt & 15u) == 8u || (pkt & 15u) == 9u)
+            midi_in_lost = 1;
+        return 0;
     }
+    midi_in_q[mi_w % MQ] = pkt;
+    RING_PUBLISH();
+    mi_w++;
+    return 1;
 }
 
 /* ------------------------------------------------------- descriptors --- */
@@ -620,8 +655,10 @@ static void ep0_service(void)
         if (s[2] > 1u)
             goto stall;
         usb.config = s[2];
-        if (usb.config == 1u)
+        if (usb.config == 1u) {
             ep1_config();
+            midi_links++;
+        }
         else
             sie_wr(S_INTRRX1E, 0);
 #if FELUCCA_UAC
@@ -854,6 +891,17 @@ static int ep1_take(const uint8_t *b, uint32_t n)
     for (i = 0; i + 3u < n; i += 4u)
         midi_in_event((uint32_t)b[i] | (uint32_t)b[i + 1] << 8 | (uint32_t)b[i + 2] << 16 | (uint32_t)b[i + 3] << 24);
     return 1;
+}
+
+#include "usb_host.c"
+
+static int usb_midi_out_ready(void)
+{
+#if FELUCCA_USB_HOST
+    if (uh.on)
+        return uh.run && uh.out_mps;
+#endif
+    return usb.config;
 }
 
 static void ep1_rx(void)                                /* leaves the packet (NAK) while the ring is too full */
@@ -1234,6 +1282,13 @@ static void uac_service(void)
 static void usb_poll(void)                              /* TIMER5 ISR, 2 kHz */
 {
     uint32_t iu, it, ir;
+#if FELUCCA_USB_HOST
+    if (uh.on) {                                        /* the host's endpoints, once the main loop found a device */
+        if (uh.run)
+            uh_poll();
+        return;
+    }
+#endif
     if (!usb.up)
         return;
     if (fm1_usb_sof_take()) {                           /* SOF pending: not a reliable "host is there", */
@@ -1346,10 +1401,13 @@ static void usb_start(void)                             /* boot, or main-loop re
  * later still enumerates. */
 static void usb_retry(uint32_t now_ms)
 {
-    static uint32_t t;
-    if (usb.up || usb.detached || now_ms - t < 1000u)
+#if FELUCCA_USB_HOST
+    if (uh.on)
         return;
-    t = now_ms;
+#endif
+    if (usb.up || usb.detached || now_ms - usb_retry_ms < 1000u)
+        return;
+    usb_retry_ms = now_ms;
     usb.retries++;
     usb_start();
 }
@@ -1358,5 +1416,12 @@ static void usb_detach(void)
 {
     usb.detached = 1;
     usb.up = 0;
+    RING_PUBLISH();
+#if FELUCCA_USB_HOST
+    if (uh.on)
+        uh_session_end();
+    uh.want = uh.on = 0;
+    RING_PUBLISH();
+#endif
     fm1_usb_off();
 }

@@ -257,6 +257,9 @@ UI_SMALL static void fm1_main(void)
     for (;;) {
         uint32_t m = fm1_ms;
         fm1_wdt_feed();
+#if FELUCCA_USB_HOST
+        usb_host_task(fm1_ms);                          /* (before the retry: docs/USB_HOST.md) */
+#endif
         usb_retry(fm1_ms);
         if ((uint32_t)(m - healthy_since) >= 30000u && bootguard.pending) {
             bootguard_clear(&bootguard);     /* 30 s of this boot, even if TIMER4 survived reset */

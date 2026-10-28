@@ -3544,6 +3544,17 @@ static void events_block(uint32_t n)
             input_off(t, d1);
         }
     }
+    if (midi_usb_lost) {                              /* (2.9) the host port's device went, or the mode changed: its
+                                                       * notes end below, its pedals now (every MIDI source's) */
+        uint32_t c;
+        midi_usb_lost = 0;
+        midi_in_lost = 1;
+        for (c = 0; c < 16u; c++)
+            if (ch_sus[c]) {
+                sus_set(&trk[(ch_sus[c] - 1u) % NTRK], 0);
+                ch_sus[c] = 0;
+            }
+    }
     if (midi_in_lost) {                               /* (2.8.3) a note message was lost (the ring full), once what came is read: the notes MIDI
                                                        * holds end, none stays stuck for a lost note-off */
         uint32_t ti, w, b;
