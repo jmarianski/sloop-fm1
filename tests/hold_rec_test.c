@@ -182,6 +182,30 @@ static void midi_burst(void)
     check(!hung, "MIDI in: a burst over the ring's 64: no note left hanging");
 }
 
+/* (2.9) the USB host's device goes (midi_usb_lost, usb_host.c): a note still held and one kept by the sustain pedal both
+ * end, and the pedal is up for the next device */
+static void usb_lost(void)
+{
+    track_t *t = &trk[1];
+    uint32_t i, k, ch = (uint32_t)(song.g[G_CH2] - 1), held = 0, gated = 0;
+    reset(1, -1);
+    song.g[G_ROUTE] = 0;
+    for (k = 0; k < 4; k++) block();
+    midi_in_event(0x0Bu | (0xB0u | ch) << 8 | 64u << 16 | 127u << 24);      /* pedal down */
+    midi_in_event(0x09u | (0x90u | ch) << 8 | 48u << 16 | 100u << 24);      /* C3 on, then off: the pedal keeps it */
+    midi_in_event(0x08u | (0x80u | ch) << 8 | 48u << 16);
+    midi_in_event(0x09u | (0x90u | ch) << 8 | 52u << 16 | 100u << 24);      /* E3 on, still held */
+    for (k = 0; k < 20; k++) block();
+    for (i = 0; i < NVOICE; i++)
+        held += t->v[i].active && t->v[i].gate;
+    midi_usb_lost = 1;
+    for (k = 0; k < 200; k++) block();
+    for (i = 0; i < NVOICE; i++)
+        gated += t->v[i].active && t->v[i].gate;
+    check(held == 2u && !gated && !midi_usb_lost && !ch_sus[ch],
+          "USB host device gone (2.9): a held note and a pedalled one end, the pedal up");
+}
+
 static void mono_note(void)
 {
     track_t *t = &trk[0];
@@ -313,6 +337,7 @@ int main(void)
     free_take(1, -1, "track 2 RHODES (POLY)", 1);
     armed_take(1, "track 2 RHODES (POLY)");
     midi_burst();
+    usb_lost();
     mono_note();
     overdub(1, -1, "track 2 RHODES (POLY)", 10);
     overdub(1, -1, "track 2 RHODES (POLY)", 5);

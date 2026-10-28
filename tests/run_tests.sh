@@ -138,6 +138,19 @@ run "USB RATE 44.1: the descriptors of a build without 48 kHz (SLOOP 2.4), byte 
     sh -c "[ \"\$(UAC_DUMP=1 '$OUT/uac_test_441' | tail -n 2)\" = \"\$(UAC_DUMP=1 '$OUT/uac_test_no48' | tail -n 2)\" ] && echo same"
 uac_in_app() { ${CC%% *} -E -Ibuild/gen -Ifirmware/hal -Ifirmware/src firmware/src/felucca.c 2>/dev/null | grep -q uac_service; }
 run "USB audio input: built into the firmware (FELUCCA_UAC set before usb.c)" uac_in_app
+# the USB MIDI host (2.9, src/usb_host.c, MPL-2.0: tests/usb_host_test.c) against a model of the SIE, a keyboard, a hub
+# and a USB stick, under ASan + UBSan: host alone, host with the USB audio input (as the FM-1 has it), device only, loader
+USBH="${CC_UB:-cc} -std=c11 -O1 -Wall -Wextra -Wno-unused-function -Wno-unused-variable -Wno-missing-field-initializers -Wno-nonnull -fsanitize=address,undefined -fno-sanitize-recover=all -DHALF_FRAMES=$HALF"
+$USBH -o "$OUT/usb_host_test" tests/usb_host_test.c
+run "USB MIDI host: enumeration, hub, MIDI in / out, faults, unplug, back to device" "$OUT/usb_host_test"
+$USBH -DTEST_UAC=1 -o "$OUT/usb_host_test_uac" tests/usb_host_test.c
+run "USB MIDI host with the USB audio input: audio stopped on the switch" "$OUT/usb_host_test_uac"
+$USBH -DTEST_HOST=0 -o "$OUT/usb_host_test_dev" tests/usb_host_test.c
+run "USB MIDI host not built (FELUCCA_USB_HOST=0): the device as before" "$OUT/usb_host_test_dev"
+$USBH -DFELUCCA_LOADER=1 -o "$OUT/usb_host_test_ldr" tests/usb_host_test.c
+run "USB MIDI host: never in the update loader (FELUCCA_LOADER)" "$OUT/usb_host_test_ldr"
+usbh_in_app() { ${CC%% *} -E -Ibuild/gen -Ifirmware/hal -Ifirmware/src firmware/src/felucca.c 2>/dev/null | grep -q usb_host_task; }
+run "USB MIDI host: built into the firmware (GLO > USB > PORT)" usbh_in_app
 
 $CC -o "$OUT/ota_test" tests/ota_test.c
 run "M-UPGRADE entry" "$OUT/ota_test" build/felucca.fwsc
