@@ -369,7 +369,7 @@ SLOOP takes MIDI from two places at once:
 
 Your sequencer uses the other channels for other gear? GLO → MIDI 2 → **IN = CH 1 … CH 16** (2.6): SLOOP then answers that one channel only, on the selected track, and ignores the rest.
 
-A USB keyboard plugged **straight into the FM-1** cannot work: both are USB devices, and a USB link needs a host (a computer, a phone, or a USB MIDI host box). Bluetooth MIDI is not supported: SLOOP, like Felucca, never switches the radio on.
+**A USB keyboard straight into the FM-1 (2.9):** GLO → **USB** → **PORT** = **HOST** makes the FM-1 the host of a class-compliant USB MIDI controller or synth, no computer needed (turn it twice: it asks; every power-on is DEVICE again, so the editor and updates always work). **The FM-1 gives no power on the port:** plug the controller in through a **powered USB hub** or an **OTG adapter with its own power input**. Its notes, CCs and clock come in as USB MIDI; what SLOOP sends on USB goes to it. Full-speed USB MIDI 1.0 devices, straight in or behind one hub. Details: [GUIDE.md](GUIDE.md#a-usb-midi-controller-straight-into-the-fm-1-29). Bluetooth MIDI is not supported: SLOOP, like Felucca, never switches the radio on.
 
 ### MIDI out
 
@@ -540,6 +540,7 @@ See [BUILDING.md](BUILDING.md). In short: the JieLi toolchain and three files of
 - **@renebohne** — the played-note key lights (pull request #11) and, in 2.6, MIDI Program Change (Felucca pull request #179).
 - **ChanceTheMaker** and **keremimo** — the TRS MIDI input fix (Felucca Salt) and contributions to the MIDI clock.
 - **andrerezemini** ([sloop-lab](https://github.com/andrerezemini/sloop-lab)) — in 2.7 the sound on the FM-1's second core and 38 KB of RAM back (pull request #111), on the dual-core start of **Charles Vestal** ([X0X](https://github.com/charlesvestal/fm1-x0x)) and **keremimo** ([Melodee](https://github.com/keremimo/melodee)).
+- **Adrien Tibi** (Recursive Field Instruments) and **Kerem Kilic** (keremimo, Ellic Studio) — in 2.9 the USB MIDI host (GLO → USB → PORT = HOST), written for **[Melodee](https://github.com/keremimo/melodee)** and ported to [felucca-bsp](https://github.com/hugelton/felucca-bsp) in its pull request #7 (MPL-2.0).
 - **juanjiant-bit** ([JIANT FM](https://github.com/juanjiant-bit/JIANT)) — in 2.7 the progressive knob acceleration (KNOB ACCEL) and the LEVEL / PAN glide come from JIANT's.
 - **renebohne** — in 2.7 MIDI CC 74 sweeps each engine's own cutoff or brightness, after his pull request #71 (Felucca 1.1.5's standard CC map).
 - **@ordenador** (Mario Faúndez Vidal) — the web editor's local audio preview: the firmware's own engines and sequencer in the browser (WebAssembly), with the playable piano / pads and the inline sequence editing (pull request #120).

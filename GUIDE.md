@@ -728,6 +728,7 @@ Tap a button to open its first page (or the last one you used); **tap it again**
 | | **MIDI** (2.6) | CH1: track 1's MIDI channel (OFF, 1–16) | CH2: track 2's | CH3: track 3's | CH4: the drum track's (default 10) |
 | | **MIDI 2** (2.6) | IN: NOTES / CLOCK / CH 1–16 | OTHER: the channels no track has: SEL (the selected track) / OFF | OUT: KEYS / SEQ | BEND: the pitch bend's range, 1–12 semitones |
 | | **MIDI 3** (2.7) | FX CH: the punch-in effects' MIDI channel (OFF, 1–16) | DR MAP: how MIDI notes play the drums (GM / 1-16) | REMOTE: the buttons over MIDI (OFF, 1–16) | CLOCK: OUT, the MIDI clock and START / STOP out on USB (OFF / OUT) |
+| | **USB** (2.9) | PORT: DEVICE / HOST, the USB port (asks; every power-on is DEVICE) | — | — | — |
 | **SAVE** | **PRESETS** | the sound | the engine | — | — |
 | | **USER** | SLOT 1–32 | LOAD (GO) | ERASE (GO) | SAVE (GO) |
 | | **PROJECT** | SLOT 1–4 | ERASE (GO) | LOAD (GO) | SAVE (GO) |
@@ -960,13 +961,14 @@ If a button or knob does the wrong thing, HOME menu → SYSTEM → **HARDWARE CA
 ### Where MIDI comes in
 
 - **The MIDI IN jack** (3.5 mm TRS on the FM-1): a keyboard or pad controller with a MIDI output, through a TRS-to-DIN MIDI adapter. If nothing plays, try the other type of adapter (type A / type B).
-- **USB**: a computer or phone (a DAW, a MIDI routing app) or a USB MIDI host box. A USB keyboard plugged straight into the FM-1 cannot work: both are USB devices, and a USB link needs a host.
+- **USB**: a computer or phone (a DAW, a MIDI routing app) or a USB MIDI host box.
+- **A USB MIDI controller plugged into the FM-1** (2.9): GLO → USB → PORT = **HOST**, through a powered hub or a powered OTG adapter. [Below](#a-usb-midi-controller-straight-into-the-fm-1-29).
 
-Both work at once.
+The jack and USB work at once.
 
 ### All the MIDI settings: GLO → MIDI, MIDI 2 (2.6) and MIDI 3 (2.7)
 
-Every MIDI setting is on these pages of GLO (tap GLO until **MIDI**). They are settings of the FM-1: kept through power-off, not changed by a project, and in the web editor's backups.
+Every MIDI setting is on these pages of GLO (tap GLO until **MIDI**; the USB port's mode, 2.9, is on the page after them: [GLO → USB](#a-usb-midi-controller-straight-into-the-fm-1-29)). They are settings of the FM-1: kept through power-off, not changed by a project, and in the web editor's backups.
 
 | Page | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 | --- | --- | --- | --- | --- |
@@ -987,6 +989,19 @@ Every MIDI setting is on these pages of GLO (tap GLO until **MIDI**). They are s
 IN and OUT are also on GLO → SYSTEM, next to SYNC (the clock), where they were before 2.6.
 
 **Examples.** A keyboard on channel 1 plays track 1; select another track and play it from channel 4 (OTHER = SEL). An external sequencer with drums on 10, bass on 2, pad on 11, lead on 8: CH1 = 2, CH2 = 11, CH3 = 8, CH4 = 10, OTHER = OFF. A KeyStep Pro whose other channels drive other gear: IN = CH n, and that channel plays the selected track.
+
+### A USB MIDI controller straight into the FM-1 (2.9)
+
+The FM-1's USB-C port is usually a **device**: a computer or a phone is the host. GLO → **USB** (the page after MIDI 3) → **PORT** = **HOST** turns it around: the FM-1 is the host of a class-compliant USB MIDI keyboard, pad controller or synth, with no computer at all.
+
+- **Switching:** turn KNOB 1 one detent (*AGAIN: USB HOST*), then once more within a second and a half. The same way back to **DEVICE**. It is **never kept**: every power-on starts as DEVICE, so the web editor, updates and USB RESCUE always find the FM-1 as before. While the port is HOST the computer loses the FM-1 (MIDI, USB audio, the editor).
+- **Power: the FM-1 gives none to the port.** A controller plugged straight in stays dark. Plug it in through a **powered USB hub**, or a **USB-C OTG adapter with its own power input** (a Y cable with a charger), so the controller gets its 5 V from there.
+- **What it does:** the controller's notes, CCs, sustain, pitch bend and Program Change come in as from a computer: each channel plays its track (GLO → MIDI), IN, OTHER, MIDI LEARN and REMOTE apply. Its clock is the **USB** clock (GLO → SYSTEM → SYNC = USB). What SLOOP sends on USB (the keys, OUT = SEQ, CLOCK OUT) goes to the device when it takes MIDI in: a USB synth plays along.
+- **On the screen:** *USB: HOST*, then *USB HOST: MIDI IN* when the device is ready; *USB HOST: NOT MIDI* (not a MIDI device, e.g. a USB stick), *USB HOST: LOW SPEED* (an old low-speed device: not supported), *USB HOST: MIDI LOST* (unplugged). Unplugged, the notes and pedals it held end; plug it back and it is found again.
+- **What works:** full-speed USB MIDI 1.0 devices, straight in or behind one hub. Not: two devices at once (the first one found plays), a hub behind a hub, MIDI 2.0, SysEx from the device.
+- While a device is being found (up to a few seconds behind a hub), the screen and the keys wait; the sound goes on.
+
+The USB host is Adrien Tibi's and Kerem Kilic's, from Melodee, by way of felucca-bsp (details: [USB_HOST.md](USB_HOST.md)).
 
 ### MIDI out, clock in (GLO → SYSTEM)
 

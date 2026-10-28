@@ -12,9 +12,9 @@ Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
 
 ## What is code (GPL-3.0-only)
 
-Every file in this tree that carries an `SPDX-License-Identifier: GPL-3.0-only` header (one source file
-carries another: `firmware/src/fm6_core.c`, msfa, Apache-2.0, below; the firmware built with it is
-GPL-3.0-only as a whole):
+Every file in this tree that carries an `SPDX-License-Identifier: GPL-3.0-only` header (a few source files
+carry another: `firmware/src/fm6_core.c`, msfa, Apache-2.0, and the USB MIDI host, MPL-2.0, both below; the
+firmware built with them is GPL-3.0-only as a whole):
 
 - the firmware: `firmware/` (app, HAL, update loader)
 - the build script and tools: `build.sh`, `tools/`
@@ -25,6 +25,30 @@ You may use, study, change and share it under the GPL. If you distribute Felucca
 firmware derived from it, you must also give your recipients its complete corresponding
 source under the same licence. That includes devices that ship with modified Felucca
 inside.
+
+## USB MIDI host (MPL-2.0)
+
+SLOOP 2.9's USB MIDI host is Adrien Tibi's (Recursive Field Instruments) and Kerem Kilic's (Ellic Studio,
+keremimo), written for [Melodee](https://github.com/keremimo/melodee) and taken from felucca-bsp's pull request
+[#7](https://github.com/hugelton/felucca-bsp/pull/7) (its commits `ea3d2e3` and `4f5d2b5`), where it is MPL-2.0:
+
+- `firmware/src/usb_host.c`, `firmware/src/usb_host_desc.h`, `tests/usb_host_test.c`: MPL-2.0 (their headers);
+- the host routines in `firmware/hal/fm1_usb.h` (`fm1_usb_host_attach`, `fm1_usb_line`): MPL-2.0, in a GPL-3.0-only file.
+
+The full text is in `LICENSES/MPL-2.0.txt`. MPL-2.0 names the GPL as a secondary licence (section 3.3) and these
+files are not marked incompatible with it, so a SLOOP firmware that contains them is GPL-3.0-only as a whole, while
+the files themselves stay MPL-2.0: their changes are offered under MPL-2.0 too. SLOOP's integration around them
+(`usb.c`, `main.c`, `seq.c`, the GLO → USB page) is GPL-3.0-only.
+
+Melodee's own copies are GPL-3.0-only. The authors licensed their parts of the port under MPL-2.0, in their words:
+Adrien Tibi in Melodee pull request [#75](https://github.com/keremimo/melodee/pull/75#issuecomment-6384184014)
+("For the licensing, of course, feel free to do so :)", 2026-10-24, answering keremimo's request to licence his
+part as MPL), and Kerem Kilic in felucca-bsp pull request #7's description ("I also license my contributions to
+this port under MPL-2.0."). The Melodee commits the port was made from (at `e9eab97`): `0d705bf` (Adrien's
+enumeration, hub handling, input, PHY setup, descriptor parser and SIE / bus tests), `198c8fd` (Adrien's input
+toggle and retry fixes), `b4380f9` (Kerem's MIDI output, endpoint checks, ACK ownership and recovery tests),
+`eb57309` (Kerem's disconnect debounce), `44a311a` (Kerem's idle probe and hub connection-change fixes); felucca-bsp's
+`NOTICE` has their full hashes. The register sequences follow the public JieLi AC79 SDK; no SDK source is copied.
 
 ## Additional permission (GPL-3.0 section 7)
 
@@ -51,6 +75,7 @@ assets, is entirely governed by the GPL.
 | klattsch by Tony Gies (<https://github.com/tgies/klattsch>): design reference for the VOICE (formant) engine; no code copied. Formant data from Klatt (1980) / Hillenbrand et al. (1995) | MIT (klattsch) | credit only |
 | msfa by Google Inc. and Pascal Gauthier, from Dexed (<https://github.com/asb2m10/dexed>): the FM6 engine's synthesis (SLOOP 2.4), ported to integer C for Felucca 1.0 by Leo Kuroshita (Dexed itself is GPL-3.0; only msfa is used; the FM6 factory patches are Felucca's own) | Apache-2.0 | `firmware/src/fm6_core.c`, `LICENSES/Apache-2.0-msfa.txt` |
 | DaisySP (Electrosmith, Emilie Gillet) and Rings' sympathetic strings (Emilie Gillet): the PHYS engine's models (SLOOP 2.5, from Felucca 1.0, ported to fixed point by Leo Kuroshita) | MIT | `firmware/src/phys_dsp.c`, `firmware/src/phys_symp.c` (the notice is in each file) |
+| USB MIDI host by Adrien Tibi and Kerem Kilic, from Melodee (<https://github.com/keremimo/melodee>) by way of felucca-bsp pull request #7 (<https://github.com/hugelton/felucca-bsp/pull/7>): SLOOP 2.9's GLO → USB → PORT = HOST (above) | MPL-2.0 | `firmware/src/usb_host.c`, `usb_host_desc.h`, the host routines in `firmware/hal/fm1_usb.h`, `tests/usb_host_test.c`, `LICENSES/MPL-2.0.txt` |
 | JieLi AC79 SDK: `uboot.boot`, `cfg_tool.bin`, `eq_cfg_hw.bin` are read from your SDK checkout at build time and placed in the package; no SDK files are in this tree | Apache-2.0 | <https://gitee.com/Jieli-Tech/fw-AC79_AIoT_SDK> |
 
 ## Contributions
