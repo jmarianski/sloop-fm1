@@ -105,6 +105,8 @@ enum {                          /* global parameters */
                                  * while SYNC is INT (seq.c clkout_block; a setting of the FM-1, kept in DR MAP's byte) */
     G_FXFADE,                   /* SLOOP 2.7.2, the FX layer (FX held), SELECT: how fast a punch-in FX fades in and out, 0 (instant, as
                                  * before) .. 15 (punch.c; a setting of the FM-1, kept in BEND's byte) */
+    G_USBPORT,                  /* SLOOP 2.9, GLO > USB: the port, 0 DEVICE (a computer's), 1 HOST (of a USB-MIDI controller;
+                                 * usb_host.c). Asks first, never kept: what the port is, shown (ui_input.c usb_port_poll) */
     G_COUNT
 };
 

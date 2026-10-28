@@ -120,6 +120,9 @@ UI_SMALL static void ui_say(const char *a, const char *b)
 }
 
 UI_SMALL static void ui_message(const char *s) { ui_say(s, ""); }
+#if FELUCCA_USB_HOST
+UI_SMALL static uint32_t usb_port_host(void) { return uh.want || uh.on; }   /* (2.9) GLO > USB > PORT: HOST asked or on */
+#endif
 
 UI_SMALL static void page_entered(void)
 {
@@ -524,7 +527,7 @@ UI_SMALL static int page_walk(int32_t s)
     const page_t *pg = cur_page();
     uint32_t i, fam = pg->fam, n = 0;
     int32_t cur = -1, to;
-    uint8_t idx[16];                               /* (2.7: GLO has 9 pages with MIDI 3) */
+    uint8_t idx[16];                               /* (2.7: GLO has 9 pages with MIDI 3; 2.9: 10 with USB) */
     if (ui.home || pg->scope == SC_SONG || pg->scope == SC_DRUM)
         return 0;
     for (i = 0; i < NPAGES && n < 16u; i++) {

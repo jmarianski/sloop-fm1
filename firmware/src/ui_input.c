@@ -483,7 +483,7 @@ UI_SMALL static void project_new(void)
     drum_mute = 0;                                      /* (2.6: the live mutes) */
     for (i = 0; i < G_COUNT; i++)
         if (i != G_SLOT && i != G_DRCH && i != G_SYNC && i != G_MIDI && i != G_ROUTE && (i < G_CH1 || i > G_CHOTH) &&
-            i != G_BEND && i != G_FXCH && i != G_DRMAP && i != G_RMCH && i != G_CLKOUT && i != G_FXFADE)                                                                     /* (the
+            i != G_BEND && i != G_FXCH && i != G_DRMAP && i != G_RMCH && i != G_CLKOUT && i != G_FXFADE && i != G_USBPORT)                                                                     /* (the
                                                                  * FM-1's settings: GLO > MIDI 2.6) */
             song.g[i] = GP[i].def;
     song.solo = 0;
@@ -563,6 +563,25 @@ UI_SMALL static void edit_param(uint32_t slot, int32_t steps)
         ui.lock_par = (uint8_t)id;                        /* the SEQ layer's lock parameter: the last one touched */
     if (pg->scope != SC_GLOBAL)
         ml_knob(TSEL, id);                                /* MIDI LEARN: this parameter (2.6) */
+#if FELUCCA_USB_HOST
+    if (pg->scope == SC_GLOBAL && id == G_USBPORT) {      /* (2.9) GLO > USB > PORT: one detent arms, a second one within
+                                                         * ~1.5 s switches; the value stays what the port is */
+        uint32_t host = usb_port_host();
+        *vp = (int16_t)host;
+        if ((uint32_t)v == host)
+            return;
+        if (ui.arm != G_USBPORT) {
+            ui.arm = G_USBPORT;
+            ui.arm_t = 90;
+            ui_say("AGAIN: ", v ? "USB HOST" : "USB DEVICE");
+            return;
+        }
+        ui.arm = 0;
+        usb_host_switch((uint32_t)v);
+        *vp = (int16_t)v;
+        return;
+    }
+#endif
     if (!v)
         return;
     if (pg->scope == SC_GLOBAL && (id == G_LOAD || id == G_SAVE || id == G_CLRSEQ || id == G_INITSND || id == G_NEWPRJ) &&
@@ -1101,6 +1120,23 @@ UI_SMALL static void remote_poll(void)
     fm1_remote_btn = m;
 }
 
+#if FELUCCA_USB_HOST
+/* SLOOP 2.9: the USB port, DEVICE (a computer's) or HOST (of a USB-MIDI controller, usb_host.c). What is asked for counts
+ * at once (the switch happens in the main loop's usb_host_task, usb_port_host). Never kept: every power-on starts as a device */
+UI_SMALL static void usb_port_poll(void)                           /* (top of ui_input: every frame) */
+{
+    static const char *const W[] = {"", "USB: HOST", "USB: DEVICE", "USB HOST: MIDI IN", "USB HOST: NOT MIDI",
+                                    "USB HOST: LOW SPEED", "USB HOST: MIDI LOST"};
+    uint32_t m = usb_host_message();
+    if (m && m < sizeof W / sizeof W[0])
+        ui_message(W[m]);
+    if (song.g[G_USBPORT] != (int16_t)usb_port_host()) {   /* (the editor's SET, a NEW: what the port is) */
+        song.g[G_USBPORT] = (int16_t)usb_port_host();
+        ui.force = 1;
+    }
+}
+#endif
+
 UI_SMALL static void ui_input(void)
 {
     uint32_t pressed = fm1_input_edges(0), notes = fm1_input_note_edges(), now = fm1_ticks(), id, b, k;
@@ -1111,6 +1147,9 @@ UI_SMALL static void ui_input(void)
     if (pressed || notes)
         ui_input_ms = fm1_ms;
     remote_poll();                                      /* (2.7) the buttons over MIDI */
+#if FELUCCA_USB_HOST
+    usb_port_poll();                                    /* (2.9) GLO > USB: the port's messages, its mode shown */
+#endif
     pc_poll();                                          /* MIDI Program Change: a sound (2.6, ui.c) */
     midi_chan_fix();                                    /* GLO > MIDI: no channel on two tracks (2.6, ui.c) */
     fm6_poll();                                         /* FM6: PTCH turned -> its patch */

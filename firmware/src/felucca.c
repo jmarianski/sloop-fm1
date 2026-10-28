@@ -21,6 +21,9 @@
 #include "cpu1.h"           /* the second core's job API (defined in cpu1.c; the host tests have their own) */
 #include "engines.c"
 #include "drums.c"
+#ifndef FELUCCA_USB_HOST                 /* (before params.c: its GLO > USB page; usb.c defaults it to 0) */
+#define FELUCCA_USB_HOST 1       /* 2.9: the port as the host of a USB-MIDI controller (GLO > USB > PORT; usb_host.c) */
+#endif
 #include "params.c"
 #include "voice.c"
 #include "slicer.c"          /* per-track SLICER insert, used by fx.c */
@@ -43,9 +46,6 @@
 #endif
 #ifndef FELUCCA_UAC                      /* (before usb.c: it defaults to 0) */
 #define FELUCCA_UAC 1            /* USB audio input: the master output, 16-bit stereo 44.1 kHz (usb.c, after Felucca 1.0) */
-#endif
-#ifndef FELUCCA_USB_HOST
-#define FELUCCA_USB_HOST 1       /* 2.9: the port as the host of a USB-MIDI controller (menu USB PORT; usb_host.c) */
 #endif
 #ifndef FELUCCA_UAC_TONE
 #define FELUCCA_UAC_TONE 0       /* bench: the USB input sends test triangles instead of the music */
