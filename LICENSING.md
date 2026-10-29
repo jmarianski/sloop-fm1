@@ -60,8 +60,10 @@ build), is Jacek Mariański's, MPL-2.0 as fble's own files are:
   `tests/fble_test.c`: MPL-2.0 (their headers). `fble_host.c`'s log and interrupt attach follow Charles Vestal's
   fm1-base `device/radio.c`, and its central (FIRST / CHOOSE / reconnect) follows ignis32's MIDIMON `app/ble.c`, both
   MPL-2.0;
-- the hooks around it (`main.c`, `usb.c`, `audio.c`, `editor.c`, `params.c`, `ui_draw.c`, `ui_input.c`,
-  `hal/fm1_guard.h`, `hal/fm1_flash.h`, `firmware/app_fble.ld.in`, `tools/build.py`): GPL-3.0-only, as the files.
+- `firmware/hal/fm1_clock.h` and `firmware/hal/fm1_power.h` (in the FBLE build only): fm1-base's
+  `bsp/chip/fm1_clock.h` (Charles Vestal) and the power setup of its `bsp/chip/fm1_sys.h`, MPL-2.0 (their headers);
+- the hooks around it (`main.c`, `felucca.c`, `usb.c`, `audio.c`, `editor.c`, `params.c`, `ui_draw.c`, `ui_input.c`,
+  `hal/fm1_guard.h`, `hal/fm1_flash.h`, `hal/fm1_irq.h`, `firmware/app_fble.ld.in`, `tools/build.py`): GPL-3.0-only, as the files.
 
 As with the USB MIDI host, a firmware containing them is GPL-3.0-only as a whole. The module itself is not part of
 this tree and is not linked into the firmware: it is written into the flash on its own and contains JieLi's

@@ -391,6 +391,11 @@ UI_SMALL void fm1_cstart(void)
     fm1_time_init();
     fm1_supplies_stock();                       /* (2.7) VDC14 1.60 V, SYSVDD 1.38 V, as M-VAVE's firmware: both cores
                                                  * read the flash and SRAM right on every unit (fm1_sys.h) */
+#if FELUCCA_FBLE
+    fble_power_fix = (int8_t)fm1_power_stock(); /* the rest of M-VAVE's power setup (as MIDIMON, fm1-base): the radio's
+                                                 * calibration draws a current that, on the boot loader's linear 1.3 V,
+                                                 * faults the bus at random */
+#endif
     fm1_reset_reason();
     p3 = fm1_boot.p3_rst;
     src = fm1_boot.rst_src;
@@ -416,6 +421,11 @@ UI_SMALL void fm1_cstart(void)
         *d = *s;                                /* flash driver code that must run from RAM */
     for (s = _c1_load, d = _c1_start; d < _c1_end; s++, d++)
         *d = *s;                                /* the second core's waiting loop (fm1_cpu1.h) */
+#if FELUCCA_FBLE
+    fble_clock_fix = (int8_t)fm1_clock_stock(); /* M-VAVE's own clock (as MIDIMON, fm1-base): under m-bootloader the
+                                                 * system clock is not on PLL1, and the radio's calibration (the JieLi
+                                                 * libraries) then breaks the bus: random bus faults while it trims */
+#endif
     fm1_mailbox_clear();
     fm1_guard_enable(FM1_GUARD_STACK | FM1_GUARD_WRITE | FM1_GUARD_BUS | FM1_GUARD_PC);
     fm1_boot.p3_rst = (uint8_t)p3;

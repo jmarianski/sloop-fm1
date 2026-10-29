@@ -11,6 +11,10 @@
 #include "fm1_audio.h"
 #include "fm1_adc.h"
 #include "fm1_lcd_hw.h"
+#if FELUCCA_FBLE
+#include "fm1_clock.h"
+#include "fm1_power.h"     /* (MPL-2.0, fm1-base) the 1.3 V on the DC-DC, the radio's regulator automatic */     /* (MPL-2.0, fm1-base) the stock 360 MHz on PLL1: the Bluetooth radio's calibration needs it */
+#endif
 #include "fm1_cpu1.h"      /* the second core (X0X): started in main.c, used by the render later */
 #include "felucca_tables.h"
 

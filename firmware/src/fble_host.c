@@ -180,8 +180,43 @@ UI_SMALL static void fb_flush(void)
     }
 }
 
+/* the clocks and the analog block as found (a power-on and a restart from download mode differ: the radio's
+ * calibration faults after one of them) */
+UI_SMALL static void fble_regs_log(void)
+{
+    uint32_t r[FM1_CLOCK_NREGS], i, k, v;
+    char b[40], *q;
+    fm1_clock_regs(r);
+    for (i = 0; i < FM1_CLOCK_NREGS; i += 3u) {
+        q = fcat(b, "r");
+        for (k = i; k < i + 3u && k < FM1_CLOCK_NREGS; k++)
+            q = fhex(fcat(q, " "), r[k]);
+        flog_line(b);
+    }
+    for (i = 0; i < 0x80u; i += 16u) {
+        if (i == 0x40u || i == 0x50u || i == 0x60u)
+            continue;
+        q = b;
+        *q++ = 'p';
+        *q++ = "0123456789ABCDEF"[i >> 4];
+        *q++ = '0';
+        *q++ = ' ';
+        for (k = i; k < i + 16u; k++) {
+            v = fm1_p33_read(k);
+            *q++ = "0123456789ABCDEF"[(v >> 4) & 15u];
+            *q++ = "0123456789ABCDEF"[v & 15u];
+        }
+        *q = 0;
+        flog_line(b);
+    }
+}
+
 /* ---- the host's services (fble.h fble_host) */
-static uint32_t fh_ms(void) { return fm1_ms; }
+static uint32_t fble_quiet_t4;
+static uint32_t fh_ms(void)   /* fm1_ms stands while TIMER5 is masked (fble_quiet_set): from TIMER4 meanwhile */
+{
+    return fble_quiet ? fble_quiet_t + (fm1_ticks() - fble_quiet_t4) / (1000u * FM1_TICKS_PER_US) : fm1_ms;
+}
 UI_SMALL static void fh_wdt(void) { fm1_wdt_feed(); }
 UI_SMALL static void fh_irq_attach(int index, int prio, void (*isr)(void))   /* JieLi's 0..2 above TIMER5's 4: 5..7 */
 {
@@ -199,11 +234,29 @@ UI_SMALL static void fh_irq_attach(int index, int prio, void (*isr)(void))   /* 
     irq_restore(f);
 }
 UI_SMALL static void fh_stack_floor(uint32_t lo) { fm1_guard_stack_floor(lo); }
-UI_SMALL static void fh_quiet(int on)
+/* the trim's current corrupts what the flash reads: the audio and the input interrupts run from XIP, so they are
+ * masked meanwhile (the flag alone keeps only the render out); the buffer zeroed first, the DMA loops silence */
+UI_SMALL static void fble_quiet_set(int on)
 {
-    fble_quiet_t = fm1_ms;
+    uint32_t f, b;
+    f = irq_save();
+    if (on && !fble_quiet) {
+        fm1_irq_mask(FM1_IRQ_ALNK0);
+        fm1_irq_mask(FM1_IRQ_TIMER5);
+        for (b = 0; b < 2u * HALF_WORDS; b++)
+            abuf[b] = 0;
+    } else if (!on && fble_quiet) {
+        fm1_irq_unmask(FM1_IRQ_ALNK0);
+        fm1_irq_unmask(FM1_IRQ_TIMER5);
+    }
+    if (on && !fble_quiet) {
+        fble_quiet_t = fm1_ms;
+        fble_quiet_t4 = fm1_ticks();
+    }
     fble_quiet = (uint8_t)(on != 0);
+    irq_restore(f);
 }
+UI_SMALL static void fh_quiet(int on) { fble_quiet_set(on); }
 UI_SMALL static int fh_nv_load(void *dst, uint32_t max)
 {
     const fbnv_hdr *h = fbnv();
@@ -319,7 +372,10 @@ UI_SMALL static void fble_boot(void)
     }
     fble_last_bad = (uint8_t)(flog.running && (crashed || (fm1_boot.p3_rst & 4u)));
     flog.running = 0;
-    flog_line("fble host: SLOOP boot");
+    flog_line(fble_clock_fix == 1 ? "fble host: SLOOP boot, clock set to stock"
+              : fble_clock_fix ? "fble host: SLOOP boot, clock NOT stock" : "fble host: SLOOP boot, clock stock");
+    flog_line(fble_power_fix ? "fble host: power set to stock (DC-DC on)" : "fble host: power stock already");
+    fble_regs_log();
     fbnv_read_set();
     if (flog.noload) {
         flog.noload = 0;
@@ -527,8 +583,8 @@ UI_SMALL static void fble_service(void)
     uint32_t e;
     if (fb_dirty && fm1_ms - fb_dirty_t > 1500u && !song.playing)
         fb_flush();                               /* (an erase silences the audio a moment: not while it plays) */
-    if (fble_quiet && fm1_ms - fble_quiet_t > 3000u) {
-        fble_quiet = 0;                           /* (the module's quiet(0) never came: the render back anyway) */
+    if (fble_quiet && fh_ms() - fble_quiet_t > 3000u) {
+        fble_quiet_set(0);                        /* (the module's quiet(0) never came: the render back anyway) */
         flog_line("fble: quiet too long: ended");
     }
     if (!fble) {
@@ -632,6 +688,11 @@ UI_SMALL static void fble_log_frame(void)
     if (fm1_crash.magic == FM1_CRASH_MAGIC) {
         fhex(fcat(fhex(fcat(fhex(fcat(fhex(fcat(b, "crash n "), fm1_crash.count), " vec "), fm1_crash.vec), " pc "),
                        fm1_crash.pc), " rets "), fm1_crash.rets);
+        fble_log_send(b);
+        fhex(fcat(fhex(fcat(fhex(fcat(b, "emu "), fm1_crash.emu), " dbg "), fm1_crash.dbg), " sp "), fm1_crash.sp);
+        fble_log_send(b);
+        fhex(fcat(fhex(fcat(fhex(fcat(fhex(fcat(b, "etm "), fm1_crash.etm[0]), " "), fm1_crash.etm[1]), " "),
+                       fm1_crash.etm[2]), " "), fm1_crash.etm[3]);
         fble_log_send(b);
     } else {
         fble_log_send("no crash recorded");

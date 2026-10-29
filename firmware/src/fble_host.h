@@ -5,6 +5,8 @@
 #pragma once
 #include "fble.h"
 
+static int8_t fble_power_fix;                     /* main.c fm1_power_stock(): 1 the DC-DC moved on */
+static int8_t fble_clock_fix;                     /* main.c fm1_clock_stock(): 0 stock already, 1 set, -1 failed */
 static volatile uint8_t fble_quiet;               /* the module's radio calibrates: the render holds (audio.c) */
 static void fble_midi_out(uint32_t pkt);          /* usb.c midi_out_try (the audio interrupt): a copy to Bluetooth */
 static int fble_usr4_taken(void);                 /* editor.c: USR4 is the module's, no sample upload there */
