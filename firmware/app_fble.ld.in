@@ -1,0 +1,48 @@
+/* SPDX-License-Identifier: GPL-3.0-only
+ * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
+ * (the fble build's windows: Copyright (C) 2026 Jacek Mariański) */
+/* SLOOP's memory map with the Bluetooth module's RAM windows kept free (tools/build.py --fble, FELUCCA_FBLE=1).
+ * app.ld's, with three holes; build.py writes build/fble/app_fble.ld from this file, the @...@ numbers being the
+ * windows of firmware/src/fble.h (FBLE_RT_*, FBLE_LOW_*, FBLE_ANY_*), and checks they lie where this layout expects:
+ *   RAMTEXT 0x01C00000..@RT_LO@     .ram_text, .c1_text, .lowram as app.ld (less room: the rt window takes the top)
+ *   FBLE_RT @RT_LO@..@RT_HI@        the module's .ram_text (its ISRs)
+ *   FBLE_LOW @LOW_LO@..@LOW_HI@     the module's .data / .bss (the BT heap): the bottom of app.ld's RAM region
+ *   RAM     @LOW_HI@..@ANY_LO@      SLOOP's .data, .bss, then .fble_log (fble_host.c's log lines: not zeroed at
+ *                                   boot, so the log of the run before a crash can be read)
+ *   FBLE_ANY @ANY_LO@..@ANY_HI@     the module's .pool (its tasks' stacks): the top of app.ld's RAM region
+ * The pool, the stacks and .noinit are app.ld's. _fble_* give fble_host.c the windows as linked (it refuses to load
+ * a module when they are not fble.h's). */
+MEMORY
+{
+    XIP      (rx)  : ORIGIN = 0x02000120, LENGTH = 0x8DFBC
+    RAMTEXT  (rwx) : ORIGIN = 0x01C00000, LENGTH = @RAMTEXT_LEN@
+    FBLE_RT  (rwx) : ORIGIN = @RT_LO@, LENGTH = @RT_LEN@
+    FBLE_LOW (rw)  : ORIGIN = @LOW_LO@, LENGTH = @LOW_LEN@
+    RAM      (rwx) : ORIGIN = @LOW_HI@, LENGTH = @RAM_LEN@
+    FBLE_ANY (rw)  : ORIGIN = @ANY_LO@, LENGTH = @ANY_LEN@
+    POOL     (rw)  : ORIGIN = 0x01C20000, LENGTH = 0x54000
+    NOINIT   (rw)  : ORIGIN = 0x01C7C000, LENGTH = 0x3D50
+}
+SECTIONS
+{
+    .text : { KEEP(*(.text.crt0)) *(.text*) *(.rodata*) . = ALIGN(4); _etext = .; } > XIP
+    .ram_text : { _rt_start = .; KEEP(*(.ram_text*)) . = ALIGN(4); } > RAMTEXT AT > XIP
+    _rt_load = LOADADDR(.ram_text);
+    .c1_text : { _c1_start = .; KEEP(*(.c1_text*)) . = ALIGN(4); _c1_end = .; } > RAMTEXT AT > XIP
+    _c1_load = LOADADDR(.c1_text);
+    _rt_end = _c1_end;
+    .lowram (NOLOAD) : { . = ALIGN(8); _lr_start = .; *(.bss.c1stack) *(.lowram*) . = ALIGN(4); _lr_end = .; } > RAMTEXT
+    .data : { . = ALIGN(4); _data_start = .; *(.data*) *(.sdata*) . = ALIGN(4); _data_end = .; } > RAM AT > XIP
+    _data_load = LOADADDR(.data);
+    .bss (NOLOAD) : { _bss_start = .; *(.bss*) *(.sbss*) *(COMMON) . = ALIGN(4); _bss_end = .; } > RAM
+    .fble_log (NOLOAD) : { . = ALIGN(4); *(.fble_log*) . = ALIGN(4); _ram_used_end = .; } > RAM
+    .pool (NOLOAD) : { _pool_start = .; *(.pool*) . = ALIGN(4); _pool_end = .; } > POOL
+    .noinit (NOLOAD) : { *(.noinit) *(.noinit.*) } > NOINIT
+    _guard0 = 0x01C74000; _ustack_lo = 0x01C74100; _ustack_top = 0x01C7A000;
+    _guard1 = 0x01C7A000; _sstack_lo = 0x01C7A100; _sstack_top = 0x01C7C000;
+    _fble_rt_lo = ORIGIN(FBLE_RT); _fble_rt_hi = ORIGIN(FBLE_RT) + LENGTH(FBLE_RT);
+    _fble_low_lo = ORIGIN(FBLE_LOW); _fble_low_hi = ORIGIN(FBLE_LOW) + LENGTH(FBLE_LOW);
+    _fble_any_lo = ORIGIN(FBLE_ANY); _fble_any_hi = ORIGIN(FBLE_ANY) + LENGTH(FBLE_ANY);
+    _ram_lo = ORIGIN(RAM); _ram_hi = ORIGIN(RAM) + LENGTH(RAM);
+    /DISCARD/ : { *(.comment) *(.note*) }
+}

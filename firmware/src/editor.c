@@ -807,6 +807,11 @@ UI_SMALL static void ed_handle(const uint8_t *f, uint32_t n)   /* f: the bytes b
         uint32_t rc;
         if (na < 1u || a[0] >= SMP_USER_SLOTS || !flash_ok)
             return;
+#if FELUCCA_FBLE
+        if (a[0] == 3u && fble_usr4_taken())
+            rc = 1;                                        /* USR4 holds the Bluetooth module (fble_host.c) */
+        else
+#endif
         rc = ed_smp_erase(a[0], cmd == ED_SMP_ERASE) ? 1u : 0u;
         ed_smp_open[a[0]] = (uint8_t)(cmd == ED_SMP_BEGIN && !rc);
         ed_b(a[0]);
@@ -821,7 +826,11 @@ UI_SMALL static void ed_handle(const uint8_t *f, uint32_t n)   /* f: the bytes b
         len = ed_unpack7(a + 4, na - 4u, ed_smp_buf, 256u);
         if (off < SMP_USER_DATA || (off & 0xFFu) || !len || off + len > SMP_USER_SIZE)
             rc = 1;
-        else if (usr_nz[a[0]] || !ed_smp_open[a[0]])
+        else if (usr_nz[a[0]] || !ed_smp_open[a[0]]
+#if FELUCCA_FBLE
+                 || (a[0] == 3u && fble_usr4_taken())
+#endif
+                 )
             rc = 4;                                        /* slot in use: SMP_BEGIN first (voices read it) */
         else {
             if (!(off & 0xFFFu))                           /* first write into a sector: erase it */
@@ -840,6 +849,12 @@ UI_SMALL static void ed_handle(const uint8_t *f, uint32_t n)   /* f: the bytes b
         if (na < 2u || a[0] >= SMP_USER_SLOTS || !flash_ok)
             return;
         ed_b(a[0]);
+#if FELUCCA_FBLE
+        if (a[0] == 3u && fble_usr4_taken()) {
+            ed_b(4);                                       /* (USR4 is the Bluetooth module's) */
+            break;
+        }
+#endif
         ed_b((uint32_t)ed_smp_end(a[0], a + 1, na - 1u));
         break;
     case ED_SMP_INFO:                                      /* -> per slot: zones (0 = empty), name, data KiB */

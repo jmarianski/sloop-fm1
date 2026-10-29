@@ -21,6 +21,12 @@
 #include "cpu1.h"           /* the second core's job API (defined in cpu1.c; the host tests have their own) */
 #include "engines.c"
 #include "drums.c"
+#ifndef FELUCCA_FBLE                     /* (before params.c: its GLO > BLE pages) */
+#define FELUCCA_FBLE 0           /* the Bluetooth MIDI module's socket (fble_host.c; tools/build.py --fble) */
+#endif
+#if FELUCCA_FBLE
+#include "fble_host.h"
+#endif
 #ifndef FELUCCA_USB_HOST                 /* (before params.c: its GLO > USB page; usb.c defaults it to 0) */
 #define FELUCCA_USB_HOST 1       /* 2.9: the port as the host of a USB-MIDI controller (GLO > USB > PORT; usb_host.c) */
 #endif
@@ -194,6 +200,13 @@ static void ota_commit(const uint8_t *parm)
 #endif
 #if FELUCCA_OTA
 #include "editor.c"          /* web editor SysEx (needs the OTA SysEx plumbing) */
+#endif
+#if FELUCCA_FBLE
+#if !FELUCCA_OTA || !FELUCCA_FLASH
+#error "FELUCCA_FBLE needs FELUCCA_OTA and FELUCCA_FLASH (its SysEx, its flash)"
+#endif
+#include "fble_load.h"
+#include "fble_host.c"       /* the Bluetooth module: loader, host services, SysEx "FB", GLO > BLE (MPL-2.0) */
 #endif
 #if FELUCCA_CDC
 #include "console.c"

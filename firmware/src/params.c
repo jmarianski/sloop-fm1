@@ -387,7 +387,11 @@ enum { FAM_HOME, FAM_ENV, FAM_LFO, FAM_FX, FAM_SCL, FAM_EDIT, FAM_GLO, FAM_SAVE,
        FAM_COUNT };
 enum { SC_TRACK, SC_GLOBAL, SC_ENGINE, SC_STEP, SC_TRK, SC_SONG, SC_DRUM };
 enum { GR_NONE, GR_ADSR, GR_LFO, GR_STEPS, GR_ARP, GR_SCALE, GR_FX, GR_ROLL, GR_BROWSE, GR_SLOTS, GR_USER, GR_TRK,
-       GR_SLCR, GR_INS };
+       GR_SLCR, GR_INS
+#if FELUCCA_FBLE
+       , GR_BLE, GR_BLE2         /* GLO > BLE, BLE 2: the Bluetooth module's pages (fble_host.c) */
+#endif
+};
 
 typedef struct {
     const char *title;
@@ -428,6 +432,10 @@ static const page_t PAGES[] = {
     {"MIDI 3", FAM_GLO, SC_GLOBAL, GR_NONE, {G_FXCH, G_DRMAP, G_RMCH, G_CLKOUT}},   /* 2.7: the punch-in FX over MIDI */
 #if defined FELUCCA_USB_HOST && FELUCCA_USB_HOST
     {"USB", FAM_GLO, SC_GLOBAL, GR_NONE, {G_USBPORT, 0xFF, 0xFF, 0xFF}},   /* 2.9: the port, DEVICE or HOST (usb_host.c) */
+#endif
+#if FELUCCA_FBLE
+    {"BLE", FAM_GLO, SC_GLOBAL, GR_BLE, {0xFF, 0xFF, 0xFF, 0xFF}},    /* Bluetooth: RADIO MODE LIST USE (fble_host.c) */
+    {"BLE 2", FAM_GLO, SC_GLOBAL, GR_BLE2, {0xFF, 0xFF, 0xFF, 0xFF}}, /* PC RECON OUT; the settings are not song.g's */
 #endif
     {"TEXTURE", FAM_GLO, SC_GLOBAL, GR_NONE, {G_TXSRC, G_TXLVL, G_TXTONE, G_TXMOVE}},   /* 2.6: the bed under the mix */
     {"TEXTURE 2", FAM_GLO, SC_GLOBAL, GR_NONE, {G_TXRATE, G_TXWHEN, G_TXDUCK, 0xFF}},

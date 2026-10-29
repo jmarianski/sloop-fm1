@@ -126,3 +126,30 @@ static void fm1_guard_unlock_top(void)
     FM1_C0_WR_LIMIT_EN &= ~4u;
     fm1__dbg_lock();
 }
+
+#if defined FELUCCA_FBLE && FELUCCA_FBLE
+/* (fble, the Bluetooth module: src/fble_host.c; as MIDIMON's felucca-bsp patch 0003, Jacek Mariański) code loaded at run
+ * time: the XIP window up to xip_last (the module, in place above _etext), the RAM one up to ram_last (its .ram_text,
+ * above .c1_text). A csync first: the RAM code was just written as data. Each only ever grows */
+static void fm1_guard_pc_widen(uint32_t xip_last, uint32_t ram_last)
+{
+    __asm__ volatile("csync" ::: "memory");
+    fm1__dbg_unlock();
+    if (xip_last > (uint32_t)(uintptr_t)_etext)
+        FM1_PC_LIMIT0_H = xip_last;
+    if (ram_last >= (uint32_t)(uintptr_t)_rt_end && (uint32_t)(uintptr_t)_rt_end > (uint32_t)(uintptr_t)_rt_start)
+        FM1_PC_LIMIT1_H = ram_last;
+    fm1__dbg_lock();
+}
+
+/* the stack window down to lo (the module's tasks run on stacks of their own, below SLOOP's) */
+static void fm1_guard_stack_floor(uint32_t lo)
+{
+    fm1__dbg_unlock();
+    FM1_EMU_CON &= ~(1u << 3);
+    FM1_EMU_SSP_L = lo;
+    FM1_EMU_USP_L = lo;
+    FM1_EMU_CON |= 1u << 3;
+    fm1__dbg_lock();
+}
+#endif

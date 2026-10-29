@@ -509,6 +509,12 @@ UI_SMALL static void edit_param(uint32_t slot, int32_t steps)
         tracks_edit(slot, steps);
         return;
     }
+#if FELUCCA_FBLE
+    if (pg->graph == GR_BLE || pg->graph == GR_BLE2) {    /* GLO > BLE, BLE 2 (fble_host.c) */
+        fble_knob(pg->graph == GR_BLE2, slot, steps);
+        return;
+    }
+#endif
     if (pg->graph == GR_BROWSE) {                         /* KNOB 1: one preset, KNOB 2: the next / previous engine */
         if (slot == 0u && !is_drum(TSEL)) {
             uint32_t total, cur = preset_pos(&total);
@@ -1331,6 +1337,9 @@ UI_SMALL static void ui_input(void)
         if ((s = panel_enc(EN_K1 + k)) == 0)
             continue;
         if (ui.home || pg->scope == SC_STEP || pg->scope == SC_TRK || page_desc(pg, k, &hv) ||
+#if FELUCCA_FBLE
+            pg->graph == GR_BLE || (pg->graph == GR_BLE2 && k < 3u) ||
+#endif
             (pg->graph == GR_USER && k == 0u)) {     /* (not an empty column, nor "DRUM TRACK") */
             ui.hot_col = (uint8_t)k;
             ui.hot_t = 40;

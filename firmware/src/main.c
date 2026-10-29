@@ -231,6 +231,11 @@ UI_SMALL static void fm1_main(void)
     cpu1_boot();                                        /* the second core: at power-on, before the audio and the
                                                          * timers (X0X: started later it never reaches its entry);
                                                          * if it does not answer, SLOOP runs on one core (cpu1.c) */
+#if FELUCCA_FBLE
+    fble_boot();                                        /* the Bluetooth module: checked and loaded after cpu1_boot (it
+                                                         * arms the guard's code windows again); the radio starts in
+                                                         * the main loop (fble_host.c) */
+#endif
     audio_init();
 #if FELUCCA_CDC
     usb_cdc_on = usb_serial;                            /* menu USB SERIAL (persist_boot read it): before USB starts */
@@ -318,6 +323,10 @@ UI_SMALL static void fm1_main(void)
         }
 #if FELUCCA_OTA
         ed_service();                                   /* web editor SysEx */
+#if FELUCCA_FBLE
+        fble_sysex();                                   /* the Bluetooth module's SysEx ("FB", "LG"), then its poll */
+        fble_service();
+#endif
         ota_service();                                  /* M-UPGRADE handshake */
         if (usb.ota_req) {                              /* M-UPGRADE upgrade command */
             usb.ota_req = 0;
@@ -365,6 +374,10 @@ UI_SMALL static void fm1_main(void)
             ui_input();
 #if FELUCCA_OTA
             ed_service();                       /* editor replies without waiting for the next frame */
+#endif
+#if FELUCCA_FBLE
+            fble_sysex();
+            fble_service();                     /* (the radio's events and MIDI: polled while the frame waits too) */
 #endif
         }
     }
