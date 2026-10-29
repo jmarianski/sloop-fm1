@@ -369,6 +369,9 @@ def main():
     if a.fble:
         FBLE = True
         os.environ["FELUCCA_FBLE"] = "1"
+        # the boot logo as text from the start (the image logo does not fit beside the socket: the room saved for the
+        # socket's next changes is not taken back by it; FELUCCA_LOGO_TEXT=0 still asks for the image)
+        os.environ.setdefault("FELUCCA_LOGO_TEXT", "1")
         OUT = SRC / "build" / "fble"    # (GEN stays build/gen: the generated headers are the same)
         LDR = OUT / "loader"
         name = "felucca-fble.fwsc"
