@@ -19,6 +19,7 @@
 #include <string.h>
 #include "fble.h"
 #include "fble_load.h"
+#include "fble_name.h"
 
 static uint8_t flash[0x100000];
 static uint8_t save[0x100000];
@@ -195,6 +196,58 @@ static int frames(const char *path, const uint8_t *want)
     return 0;
 }
 
+/* the devices' names (fble_name.h): UTF-8 into what the font draws (gfx.c glyph: ASCII, Latin-1 but C1, sharp s and
+ * y diaeresis), Polish and the other Latin Extended-A letters without their marks */
+static void name_case(const char *src, uint32_t max, const char *want)
+{
+    char got[64];
+    int ok;
+    memset(got, 'X', sizeof got);
+    fble_name_fold(got, src, max);
+    ok = !strcmp(got, want);
+    printf("%s  name %-34s -> %s\n", ok ? "ok  " : "FAIL", src, got);
+    fails += !ok;
+}
+static int drawable(uint8_t c) { return (c >= 0x20u && c < 0x7Fu) || (c >= 0xA0u && c != 0xDFu && c != 0xFFu); }
+static void name_cases(void)
+{
+    char src[8], got[21];
+    uint32_t cp, i, bad = 0, n = 0;
+    name_case("\xC5\xBB\xC3\x93\xC5\x81\xC4\x84", 21, "Z\xD3LA");                        /* ŻÓŁĄ */
+    name_case("\xC5\xBB\xC3\x93\xC5\x81W \xC4\x84\xC4\x98", 21, "Z\xD3LW AE");           /* ŻÓŁW ĄĘ */
+    name_case("Za\xC5\xBC\xC3\xB3\xC5\x82\xC4\x87 g\xC4\x99\xC5\x9Bl\xC4\x85 ja\xC5\xBA\xC5\x84", 21,
+              "Zaz\xF3lc gesla jazn");                                                    /* Zażółć gęślą jaźń */
+    name_case("\xC4\x8C" "e\xC5\xA1tina \xC5\x90r\xC3\xBC" "let", 21, "Cestina Or\xFClet");  /* Čeština Őrület */
+    name_case("Stra\xC3\x9F" "e", 21, "Strasse");                                         /* sharp s */
+    name_case("Caf\xE9", 21, "Caf\xE9");                                                   /* sent in Latin-1 */
+    name_case("ABCDEFGHIJKLMNOPQRS\xC5", 21, "ABCDEFGHIJKLMNOPQRS");                       /* 20 B: cut in two */
+    name_case("NUX \xC5", 21, "NUX \xC5");                                                 /* shorter: Latin-1 */
+    name_case("A\xC5X", 21, "A\xC5X");                                                     /* a lone lead byte */
+    name_case("\xE6\x97\xA5\xE6\x9C\xAC", 21, "??");                                       /* CJK */
+    name_case("MIDI \xF0\x9F\x8E\xB9", 21, "MIDI ?");                                      /* an emoji */
+    name_case("A\tB\xC2\x85" "C", 21, "AB?C");                                             /* a control, C1 */
+    name_case("\xC5\xBB\xC3\x93\xC5\x81\xC4\x84\xC5\xBB", 5, "Z\xD3LA");                  /* max: 4 and the 0 */
+    name_case("ab\xC3\x9F", 4, "abs");                                                     /* sharp s at the end */
+    for (cp = 1; cp < 0x3000u; cp++) {                                                    /* every code point: drawable */
+        i = 0;
+        if (cp < 0x80u)
+            src[i++] = (char)cp;
+        else if (cp < 0x800u)
+            src[i++] = (char)(0xC0u | cp >> 6), src[i++] = (char)(0x80u | (cp & 0x3Fu));
+        else
+            src[i++] = (char)(0xE0u | cp >> 12), src[i++] = (char)(0x80u | (cp >> 6 & 0x3Fu)),
+            src[i++] = (char)(0x80u | (cp & 0x3Fu));
+        src[i] = 0;
+        fble_name_fold(got, src, sizeof got);
+        for (i = 0; got[i]; i++)
+            bad += !drawable((uint8_t)got[i]);
+        n += (cp >= 0x20u && cp != 0x7Fu) != (got[0] != 0);
+    }
+    printf("%s  U+0001..U+2FFF: every name drawable by the font, one character each (%u bad, %u lost)\n",
+           bad || n ? "FAIL" : "ok  ", bad, n);
+    fails += bad || n;
+}
+
 int main(int argc, char **argv)
 {
     fble_header h;
@@ -213,6 +266,7 @@ int main(int argc, char **argv)
     memcpy(save, flash, sizeof flash);
     refusals(0x13000u);
     unpack_cases();
+    name_cases();
 
     if (argc > 1) {
         FILE *f = fopen(argv[1], "rb");

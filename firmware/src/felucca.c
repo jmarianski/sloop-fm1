@@ -210,6 +210,7 @@ static void ota_commit(const uint8_t *parm)
 #error "FELUCCA_FBLE needs FELUCCA_OTA and FELUCCA_FLASH (its SysEx, its flash)"
 #endif
 #include "fble_load.h"
+#include "fble_name.h"        /* the devices' names as the font draws them (MPL-2.0) */
 #include "fble_host.c"       /* the Bluetooth module: loader, host services, SysEx "FB", GLO > BLE (MPL-2.0) */
 #endif
 #if FELUCCA_CDC

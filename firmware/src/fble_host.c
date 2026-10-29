@@ -461,7 +461,7 @@ UI_SMALL static int fble_found(int i, char *name, int *rssi, uint8_t *addr)
     if (!fble_ready() || !fble->found(i, n, &r, addr))
         return 0;
     if (name)
-        str_cpy(name, n, 21);
+        fble_name_fold(name, n, 21);              /* (UTF-8 as the font draws it: fble_name.h) */
     if (rssi)
         *rssi = r;
     return 1;

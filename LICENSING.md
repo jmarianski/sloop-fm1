@@ -57,7 +57,7 @@ build), is Jacek Mariański's, MPL-2.0 as fble's own files are:
 
 - `firmware/src/fble.h`, `firmware/src/fble_load.h` (the module's interface and loader check, copies of fm1-base's of
   fble's milestone M5 with SLOOP's RAM windows), `firmware/src/fble_host.c`, `firmware/src/fble_host.h`,
-  `tests/fble_test.c`: MPL-2.0 (their headers). `fble_host.c`'s log and interrupt attach follow Charles Vestal's
+  `firmware/src/fble_name.h` (the devices' names as the font draws them), `tests/fble_test.c`: MPL-2.0 (their headers). `fble_host.c`'s log and interrupt attach follow Charles Vestal's
   fm1-base `device/radio.c`, and its central (FIRST / CHOOSE / reconnect) follows ignis32's MIDIMON `app/ble.c`, both
   MPL-2.0;
 - `firmware/hal/fm1_clock.h` and `firmware/hal/fm1_power.h` (in the FBLE build only): fm1-base's
@@ -96,7 +96,7 @@ assets, is entirely governed by the GPL.
 | msfa by Google Inc. and Pascal Gauthier, from Dexed (<https://github.com/asb2m10/dexed>): the FM6 engine's synthesis (SLOOP 2.4), ported to integer C for Felucca 1.0 by Leo Kuroshita (Dexed itself is GPL-3.0; only msfa is used; the FM6 factory patches are Felucca's own) | Apache-2.0 | `firmware/src/fm6_core.c`, `LICENSES/Apache-2.0-msfa.txt` |
 | DaisySP (Electrosmith, Emilie Gillet) and Rings' sympathetic strings (Emilie Gillet): the PHYS engine's models (SLOOP 2.5, from Felucca 1.0, ported to fixed point by Leo Kuroshita) | MIT | `firmware/src/phys_dsp.c`, `firmware/src/phys_symp.c` (the notice is in each file) |
 | USB MIDI host by Adrien Tibi and Kerem Kilic, from Melodee (<https://github.com/keremimo/melodee>) by way of felucca-bsp pull request #7 (<https://github.com/hugelton/felucca-bsp/pull/7>): SLOOP 2.9's GLO → USB → PORT = HOST (above) | MPL-2.0 | `firmware/src/usb_host.c`, `usb_host_desc.h`, the host routines in `firmware/hal/fm1_usb.h`, `tests/usb_host_test.c`, `LICENSES/MPL-2.0.txt` |
-| fble socket (Bluetooth MIDI module host, FELUCCA_FBLE builds only) by Jacek Mariański, after fm1-base by Charles Vestal (<https://github.com/charlesvestal/fm1-base>) and MIDIMON by ignis32 (<https://github.com/ignis32/midimonitor_fm1>) (above) | MPL-2.0 | `firmware/src/fble.h`, `fble_load.h`, `fble_host.c`, `fble_host.h`, `tests/fble_test.c` |
+| fble socket (Bluetooth MIDI module host, FELUCCA_FBLE builds only) by Jacek Mariański, after fm1-base by Charles Vestal (<https://github.com/charlesvestal/fm1-base>) and MIDIMON by ignis32 (<https://github.com/ignis32/midimonitor_fm1>) (above) | MPL-2.0 | `firmware/src/fble.h`, `fble_load.h`, `fble_name.h`, `fble_host.c`, `fble_host.h`, `tests/fble_test.c` |
 | JieLi AC79 SDK: `uboot.boot`, `cfg_tool.bin`, `eq_cfg_hw.bin` are read from your SDK checkout at build time and placed in the package; no SDK files are in this tree | Apache-2.0 | <https://gitee.com/Jieli-Tech/fw-AC79_AIoT_SDK> |
 
 ## Contributions
