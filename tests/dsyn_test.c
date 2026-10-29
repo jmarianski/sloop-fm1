@@ -50,7 +50,7 @@ static void ed_pack7(const uint8_t *p, uint32_t n)
 static int fails;
 static void check(int ok, const char *what) { printf("dsyn: %-78s %s\n", what, ok ? "ok" : "FAIL"); fails += !ok; }
 
-/* a factory kit's 16 sounds, one after the other (DS_SHARED, the fble build: gathered from DS_SND; four at a time) and
+/* a factory kit's 16 sounds, one after the other (DS_SHARED, the fext build: gathered from DS_SND; four at a time) and
  * the address a voice of it reads */
 #if DS_SHARED
 static const dsnd_t *KS(uint32_t k)

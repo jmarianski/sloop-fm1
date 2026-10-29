@@ -84,7 +84,7 @@ static inline int fm1_clock_stock(void)
     return fm1_clock_is_stock() ? 1 : -1;
 }
 
-/* (SLOOP fble) the clock's and the bus's registers for a report: PWR_CON, HSB, mux, CLK_CON1, SYS, the flash's
+/* (SLOOP fext) the clock's and the bus's registers for a report: PWR_CON, HSB, mux, CLK_CON1, SYS, the flash's
  * divider, PLL0 x2, PLL1 x2 */
 #define FM1_CLOCK_NREGS 10u
 static inline void fm1_clock_regs(uint32_t r[FM1_CLOCK_NREGS])

@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: MPL-2.0
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
  * Copyright (C) 2026 Charles Vestal (VDC14 and SYSVDD, the second core held on reset) */
-/* (SLOOP fble) from fm1-base bsp/chip/fm1_sys.h: the power setup, as there; fm1_sys.h first */
+/* (SLOOP fext) from fm1-base bsp/chip/fm1_sys.h: the power setup, as there; fm1_sys.h first */
 #pragma once
 /* ----------------------------------------------------- the power setup --- */
 /* The rest of M-VAVE's power setup (V15's __hw_power_init, the SDK's cpu.a power_hw.c read with llvm-dis: its

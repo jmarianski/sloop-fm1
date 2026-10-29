@@ -127,8 +127,8 @@ static void fm1_guard_unlock_top(void)
     fm1__dbg_lock();
 }
 
-#if defined FELUCCA_FBLE && FELUCCA_FBLE
-/* (fble, the Bluetooth module: src/fble_host.c; as MIDIMON's felucca-bsp patch 0003, Jacek Mariański) code loaded at run
+#if defined FELUCCA_FEXT && FELUCCA_FEXT
+/* (fext, a module: src/fext_host.c; as MIDIMON's felucca-bsp patch 0003, Jacek Mariański) code loaded at run
  * time: the XIP window up to xip_last (the module, in place above _etext), the RAM one up to ram_last (its .ram_text,
  * above .c1_text). A csync first: the RAM code was just written as data. Each only ever grows */
 static void fm1_guard_pc_widen(uint32_t xip_last, uint32_t ram_last)

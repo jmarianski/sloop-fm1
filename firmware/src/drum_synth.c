@@ -33,8 +33,8 @@ typedef struct {
 } dsnd_t;
 #define DS_LANES 16              /* kick snare clap hat open-hat tom-lo tom-hi crash ride shaker conga
                                   * rim cowbell clave kick-2 snare-2 */
-#ifndef DS_SHARED                /* the fble build (the flash is full there): the factory kits' sounds stored once */
-#define DS_SHARED FELUCCA_FBLE
+#ifndef DS_SHARED                /* the fext build (the flash is full there): the factory kits' sounds stored once */
+#define DS_SHARED FELUCCA_FEXT
 #endif
 typedef struct {
     const char *name, *style;

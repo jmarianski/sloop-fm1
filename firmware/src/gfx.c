@@ -251,7 +251,7 @@ static void cv_line(int32_t x0, int32_t y0, int32_t x1, int32_t y1, uint16_t c)
 
 /* glyph index of a character: the screen shows capitals only (SLOOP 2.6: bold capitals read better on the
  * small screen), so lower case folds to upper case, Latin-1 too (\xfc -> \xdc; not the division sign, nor sharp
- * s and y diaeresis, which have none); anything missing (and C1 controls) draws as '?'. The fble build stores only the
+ * s and y diaeresis, which have none); anything missing (and C1 controls) draws as '?'. The fext build stores only the
  * bitmaps this returns (tools/gen_font.py glyph_of, folded(): change both together) */
 static uint32_t glyph(const felucca_font_t *f, uint32_t ch)
 {
@@ -274,8 +274,8 @@ static int32_t cv_text(int32_t x, int32_t y, const felucca_font_t *f, const char
         const uint8_t *gd;
         w = f->bw[gi];
         gd = f->data + f->off[gi];
-#if FELUCCA_FBLE
-        if (f->bits == 2u) {                           /* the fble build (gen_font.py narrow): a row a byte, the 8
+#if FELUCCA_FEXT
+        if (f->bits == 2u) {                           /* the fext build (gen_font.py narrow): a row a byte, the 8
                                                         * pixels right of the pad (f->pad = FONT_PAD << sh: from x) */
             for (gy = 0; gy < f->h; gy++)
                 for (gx = 0; gx < (8u << f->sh); gx++)

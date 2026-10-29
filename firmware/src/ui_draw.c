@@ -443,9 +443,9 @@ UI_SMALL static uint32_t graph_signature(void)
     }
     if (pg->graph == GR_SLCR && t->p[P_SLCR])        /* the SLICER's step playing */
         h ^= (sl[song.sel].idx + 1u) * 2654435761u;
-#if FELUCCA_FBLE
-    if (pg->graph == GR_BLE || pg->graph == GR_BLE2)  /* the state, the module, the scan's devices */
-        h ^= fble_graph_sig();
+#if FELUCCA_FEXT
+    if (pg->graph == GR_EXT || pg->graph == GR_EXT2)  /* the module's columns and lines */
+        h ^= fext_graph_sig(pg->graph == GR_EXT2);
 #endif
     if (pg->graph == GR_SLOTS)                       /* (a checksum over each slot) */
         for (i = 0; i < 4u; i++)
@@ -798,11 +798,11 @@ UI_SMALL static void draw_graph(void)
             cv_oy = 0;
             graph_user();
             break;
-#if FELUCCA_FBLE
-        case GR_BLE:
-        case GR_BLE2:
+#if FELUCCA_FEXT
+        case GR_EXT:
+        case GR_EXT2:
             cv_oy = 0;
-            fble_graph();
+            fext_graph(pg->graph == GR_EXT2);
             break;
 #endif
         default:
@@ -814,8 +814,8 @@ UI_SMALL static void draw_graph(void)
         }
     }
     top = !ui.home && !drum_note && (pg->graph == GR_BROWSE || pg->graph == GR_SLOTS || pg->graph == GR_USER ||
-#if FELUCCA_FBLE
-                                     pg->graph == GR_BLE || pg->graph == GR_BLE2 ||
+#if FELUCCA_FEXT
+                                     pg->graph == GR_EXT || pg->graph == GR_EXT2 ||
 #endif
                                      pg->graph == GR_ROLL || big_page(pg));   /* these draw from the top */
     cv_oy = 0;
@@ -978,9 +978,9 @@ UI_SMALL static void draw_columns(void)
         draw_column(3, "FAV", fav_has(fav_key()) ? "ON" : "--", "", VAL(3u), -1, ICON_NONE);   /* (2.7) KNOB 4 */
         return;
     }
-#if FELUCCA_FBLE
-    if (cur_page()->graph == GR_BLE || cur_page()->graph == GR_BLE2) {
-        fble_columns(cur_page()->graph == GR_BLE2);
+#if FELUCCA_FEXT
+    if (cur_page()->graph == GR_EXT || cur_page()->graph == GR_EXT2) {
+        fext_columns(cur_page()->graph == GR_EXT2);
         return;
     }
 #endif

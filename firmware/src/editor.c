@@ -807,9 +807,9 @@ UI_SMALL static void ed_handle(const uint8_t *f, uint32_t n)   /* f: the bytes b
         uint32_t rc;
         if (na < 1u || a[0] >= SMP_USER_SLOTS || !flash_ok)
             return;
-#if FELUCCA_FBLE
-        if (a[0] == 3u && fble_usr4_taken())
-            rc = 1;                                        /* USR4 holds the Bluetooth module (fble_host.c) */
+#if FELUCCA_FEXT
+        if (a[0] == 3u && fext_slot_taken())
+            rc = 1;                                        /* USR4 holds the fext module (fext_host.c) */
         else
 #endif
         rc = ed_smp_erase(a[0], cmd == ED_SMP_ERASE) ? 1u : 0u;
@@ -827,8 +827,8 @@ UI_SMALL static void ed_handle(const uint8_t *f, uint32_t n)   /* f: the bytes b
         if (off < SMP_USER_DATA || (off & 0xFFu) || !len || off + len > SMP_USER_SIZE)
             rc = 1;
         else if (usr_nz[a[0]] || !ed_smp_open[a[0]]
-#if FELUCCA_FBLE
-                 || (a[0] == 3u && fble_usr4_taken())
+#if FELUCCA_FEXT
+                 || (a[0] == 3u && fext_slot_taken())
 #endif
                  )
             rc = 4;                                        /* slot in use: SMP_BEGIN first (voices read it) */
@@ -849,8 +849,8 @@ UI_SMALL static void ed_handle(const uint8_t *f, uint32_t n)   /* f: the bytes b
         if (na < 2u || a[0] >= SMP_USER_SLOTS || !flash_ok)
             return;
         ed_b(a[0]);
-#if FELUCCA_FBLE
-        if (a[0] == 3u && fble_usr4_taken()) {
+#if FELUCCA_FEXT
+        if (a[0] == 3u && fext_slot_taken()) {
             ed_b(4);                                       /* (USR4 is the Bluetooth module's) */
             break;
         }

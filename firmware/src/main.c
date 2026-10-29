@@ -231,10 +231,10 @@ UI_SMALL static void fm1_main(void)
     cpu1_boot();                                        /* the second core: at power-on, before the audio and the
                                                          * timers (X0X: started later it never reaches its entry);
                                                          * if it does not answer, SLOOP runs on one core (cpu1.c) */
-#if FELUCCA_FBLE
-    fble_boot();                                        /* the Bluetooth module: checked and loaded after cpu1_boot (it
+#if FELUCCA_FEXT
+    fext_boot();                                        /* the fext module: checked and loaded after cpu1_boot (it
                                                          * arms the guard's code windows again); the radio starts in
-                                                         * the main loop (fble_host.c) */
+                                                         * the main loop (fext_host.c) */
 #endif
     audio_init();
 #if FELUCCA_CDC
@@ -323,9 +323,9 @@ UI_SMALL static void fm1_main(void)
         }
 #if FELUCCA_OTA
         ed_service();                                   /* web editor SysEx */
-#if FELUCCA_FBLE
-        fble_sysex();                                   /* the Bluetooth module's SysEx ("FB", "LG"), then its poll */
-        fble_service();
+#if FELUCCA_FEXT
+        fext_sysex();                                   /* the fext module's SysEx ("FB", "LG"), then its poll */
+        fext_service();
 #endif
         ota_service();                                  /* M-UPGRADE handshake */
         if (usb.ota_req) {                              /* M-UPGRADE upgrade command */
@@ -375,9 +375,9 @@ UI_SMALL static void fm1_main(void)
 #if FELUCCA_OTA
             ed_service();                       /* editor replies without waiting for the next frame */
 #endif
-#if FELUCCA_FBLE
-            fble_sysex();
-            fble_service();                     /* (the radio's events and MIDI: polled while the frame waits too) */
+#if FELUCCA_FEXT
+            fext_sysex();
+            fext_service();                     /* (its MIDI and its radio: polled while the frame waits too) */
 #endif
         }
     }
@@ -391,8 +391,8 @@ UI_SMALL void fm1_cstart(void)
     fm1_time_init();
     fm1_supplies_stock();                       /* (2.7) VDC14 1.60 V, SYSVDD 1.38 V, as M-VAVE's firmware: both cores
                                                  * read the flash and SRAM right on every unit (fm1_sys.h) */
-#if FELUCCA_FBLE
-    fble_power_fix = (int8_t)fm1_power_stock(); /* the rest of M-VAVE's power setup (as MIDIMON, fm1-base): the radio's
+#if FELUCCA_FEXT
+    fext_power_fix = (int8_t)fm1_power_stock(); /* the rest of M-VAVE's power setup (as MIDIMON, fm1-base): the radio's
                                                  * calibration draws a current that, on the boot loader's linear 1.3 V,
                                                  * faults the bus at random */
 #endif
@@ -421,8 +421,8 @@ UI_SMALL void fm1_cstart(void)
         *d = *s;                                /* flash driver code that must run from RAM */
     for (s = _c1_load, d = _c1_start; d < _c1_end; s++, d++)
         *d = *s;                                /* the second core's waiting loop (fm1_cpu1.h) */
-#if FELUCCA_FBLE
-    fble_clock_fix = (int8_t)fm1_clock_stock(); /* M-VAVE's own clock (as MIDIMON, fm1-base): under m-bootloader the
+#if FELUCCA_FEXT
+    fext_clock_fix = (int8_t)fm1_clock_stock(); /* M-VAVE's own clock (as MIDIMON, fm1-base): under m-bootloader the
                                                  * system clock is not on PLL1, and the radio's calibration (the JieLi
                                                  * libraries) then breaks the bus: random bus faults while it trims */
 #endif

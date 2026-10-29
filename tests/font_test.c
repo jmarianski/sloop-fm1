@@ -112,7 +112,7 @@ int main(int argc, char **argv)
             off4[g] = (uint16_t)n;
             for (y = 0; y < FONT_S.h; y++)
                 for (xx = 0; xx < w; xx++) {
-#if FELUCCA_FBLE                       /* (a row a byte, the pad columns not stored: gen_font.py narrow) */
+#if FELUCCA_FEXT                       /* (a row a byte, the pad columns not stored: gen_font.py narrow) */
                     uint32_t on = xx >= FONT_PAD && xx < FONT_PAD + 8u &&
                                   ((FONT_S_DATA[FONT_S_OFF[g] + y] >> (7u - (xx - FONT_PAD))) & 1u);
 #else
@@ -127,10 +127,10 @@ int main(int argc, char **argv)
         check(n == 21504u && render_all(&s4, 255u) == FONT_S_HASH && render_all(&l4, 95u) == FONT_L_HASH,
               "the 4-bit format (anti-aliased fonts) still draws the same pixels");
     }
-#if FELUCCA_FBLE                       /* (the fble build: only the bitmaps glyph() reaches, each once, a row a byte:
+#if FELUCCA_FEXT                       /* (the fext build: only the bitmaps glyph() reaches, each once, a row a byte:
                                          * gen_font.py folded(), narrow()) */
     check(sizeof FONT_S_DATA == 2144u && FONT_S.bits == 2u && FONT_L.bits == 2u,
-          "the fble build's bitmaps: the glyphs drawn, each once, a row a byte: 2144 bytes");
+          "the fext build's bitmaps: the glyphs drawn, each once, a row a byte: 2144 bytes");
 #else
     check(sizeof FONT_S_DATA == 5376u && FONT_S.bits == 1u, "the Terminus bitmaps at 1 bit a pixel: 5376 bytes (21504 at 4 bits)");
 #endif

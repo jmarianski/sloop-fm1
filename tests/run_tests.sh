@@ -68,16 +68,16 @@ $CC -O2 -w -Ibuild/gen -Ifirmware/src -Ifirmware/hal -o "$OUT/userkit_test" test
 run "user drum kits (KIT USR1..USR3): a user slot's sounds on the drum lanes" "$OUT/userkit_test"
 $CC -O2 -w -Ibuild/gen -Ifirmware/src -o "$OUT/dsyn_test" tests/dsyn_test.c -lm
 run "SYN1..SYN4 drum kits and the editor's DRUM SYNTH commands (v10)" "$OUT/dsyn_test"
-# the fble build's factory kits (drum_synth.c DS_SHARED: each different sound once): the same commands, the same sound
+# the fext build's factory kits (drum_synth.c DS_SHARED: each different sound once): the same commands, the same sound
 $CC -O2 -w -DDS_SHARED=1 -Ibuild/gen -Ifirmware/src -o "$OUT/dsyn_test_shared" tests/dsyn_test.c -lm
-run "SYN1..SYN4 and DRUM SYNTH with the fble build's shared kit sounds (DS_SHARED)" "$OUT/dsyn_test_shared"
+run "SYN1..SYN4 and DRUM SYNTH with the fext build's shared kit sounds (DS_SHARED)" "$OUT/dsyn_test_shared"
 $CC -O2 -w -DDS_SHARED=1 -Ibuild/gen -Ifirmware/src -o "$OUT/drumkit_test_shared" tests/drumkit_test.c -lm
 run "synthesised drum kits with DS_SHARED: the same samples as above" sh -c \
     "'$OUT/drumkit_test_shared' '$OUT/drum-kits-shared.wav' '$OUT/drum-kits-shared.txt' >/dev/null && cmp '$OUT/drum-kits.wav' '$OUT/drum-kits-shared.wav' && echo 'the same samples'"
 $CC -O2 -w -Ibuild/gen -Ifirmware/src -o "$OUT/font_test" tests/font_test.c
 run "the screen font at 1 bit a pixel: every glyph, the same pixels as 2.5" "$OUT/font_test"
-$CC -O2 -w -DFELUCCA_FBLE=1 -Ibuild/gen -Ifirmware/src -o "$OUT/font_test_fble" tests/font_test.c
-run "the fble build's screen font (the glyphs drawn, each once): the same pixels" "$OUT/font_test_fble"
+$CC -O2 -w -DFELUCCA_FEXT=1 -Ibuild/gen -Ifirmware/src -o "$OUT/font_test_fext" tests/font_test.c
+run "the fext build's screen font (the glyphs drawn, each once): the same pixels" "$OUT/font_test_fext"
 $CC -O2 -w -Ibuild/gen -Ifirmware/src -o "$OUT/punch_test" tests/punch_test.c -lm
 run "punch-in FX: 27 effects (11 on the black keys), bounded, dry after release, FX-held keys" "$OUT/punch_test" "$OUT/punch-fx.wav"
 $CC -O2 -w -Ibuild/gen -Ifirmware/src -o "$OUT/fx251_test" tests/fx251_test.c -lm
@@ -160,21 +160,22 @@ run "USB MIDI host: never in the update loader (FELUCCA_LOADER)" "$OUT/usb_host_
 usbh_in_app() { ${CC%% *} -E -Ibuild/gen -Ifirmware/hal -Ifirmware/src firmware/src/felucca.c 2>/dev/null | grep -q usb_host_task; }
 run "USB MIDI host: built into the firmware (GLO > USB > PORT)" usbh_in_app
 
-# the Bluetooth module's loader (FELUCCA_FBLE, src/fble.h, fble_load.h, MPL-2.0: tests/fble_test.c): a module made for
-# SLOOP's windows, what must be refused (segment 1, MIDIMON's windows, loads into SLOOP's RAM), the write frames; with the
-# module linked for SLOOP (fble's sh build.sh fble-sloop; FBLE_BUILD, by default the MIDIMON worktree next to this one)
-# also the real image and fble_push.py's frames
-$CC -Ifirmware/src -o "$OUT/fble_test" tests/fble_test.c
-FBLE_BUILD="${FBLE_BUILD:-../midimonitor_fm1/fble/build-sloop}"
-if [ -f "$FBLE_BUILD/fble_seg0.bin" ] && [ -f "$FBLE_BUILD/fble_push.frames" ]; then
-    run "Bluetooth module loader: checks, frames, the module linked for SLOOP" "$OUT/fble_test" \
-        "$FBLE_BUILD/fble_seg0.bin" "$FBLE_BUILD/fble_push.frames"
+# the socket for an fext module (FELUCCA_FEXT, src/fext.h, fext_load.h, fext_host.h, MPL-2.0: tests/fext_test.c): a
+# module made for SLOOP's slot and windows, what must be refused (not moved here, windows outside SLOOP's, loads into
+# SLOOP's RAM), the write frames, module texts for the font; with a real module moved to SLOOP's slot (fble's
+# sh build.sh: build/check/; FEXT_MODULE, by default the fble repository next to this one) also its image and
+# fext_push.py's frames
+$CC -Ifirmware/src -o "$OUT/fext_test" tests/fext_test.c
+FEXT_MODULE="${FEXT_MODULE:-../fble/build/check}"
+if [ -f "$FEXT_MODULE/fble-sloop.bin" ] && [ -f "$FEXT_MODULE/fble-sloop.frames" ]; then
+    run "fext socket: checks, frames, a real module moved to SLOOP's slot" "$OUT/fext_test" \
+        "$FEXT_MODULE/fble-sloop.bin" "$FEXT_MODULE/fble-sloop.frames"
 else
-    run "Bluetooth module loader: checks, frames (no module image in \$FBLE_BUILD)" "$OUT/fble_test"
+    run "fext socket: checks, frames (no module image in \$FEXT_MODULE)" "$OUT/fext_test"
 fi
-fble_in_app() { ${CC%% *} -E -DFELUCCA_FBLE=1 -Ibuild/gen -Ifirmware/hal -Ifirmware/src firmware/src/felucca.c 2>/dev/null | grep -q fble_service &&
-    ! ${CC%% *} -E -Ibuild/gen -Ifirmware/hal -Ifirmware/src firmware/src/felucca.c 2>/dev/null | grep -q fble_service; }
-run "Bluetooth module host: only in the FELUCCA_FBLE build" fble_in_app
+fext_in_app() { ${CC%% *} -E -DFELUCCA_FEXT=1 -Ibuild/gen -Ifirmware/hal -Ifirmware/src firmware/src/felucca.c 2>/dev/null | grep -q fext_service &&
+    ! ${CC%% *} -E -Ibuild/gen -Ifirmware/hal -Ifirmware/src firmware/src/felucca.c 2>/dev/null | grep -q fext_service; }
+run "fext socket: only in the FELUCCA_FEXT build" fext_in_app
 
 $CC -o "$OUT/ota_test" tests/ota_test.c
 run "M-UPGRADE entry" "$OUT/ota_test" build/felucca.fwsc

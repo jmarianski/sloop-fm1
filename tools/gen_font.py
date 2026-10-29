@@ -130,7 +130,7 @@ def glyph_of(ch):
 
 
 def folded(data, offs, first, size):
-    """the fble build's FONT_S (the flash is full there): the bitmaps of the glyphs glyph() never returns (lower case,
+    """the fext build's FONT_S (the flash is full there): the bitmaps of the glyphs glyph() never returns (lower case,
     C1, Latin-1 lower case) left out, their offsets those of what they are drawn as, and equal bitmaps stored once.
     Every index draws what it drew; glyph() and cv_text() unchanged"""
     assert offs == [i * size for i in range(len(offs))], "one bitmap size for every glyph"
@@ -149,7 +149,7 @@ def folded(data, offs, first, size):
 
 
 def narrow(data, h, bw, size):
-    """the fble build's rows: a pixel font 8 px wide stores its rows a byte each (the PAD columns either side, always
+    """the fext build's rows: a pixel font 8 px wide stores its rows a byte each (the PAD columns either side, always
     empty, left out: gfx.c cv_text bits 2); None when a glyph has a pixel there"""
     if bw != 8 + 2 * PAD:
         return None
@@ -206,15 +206,15 @@ def main(out):
                     data.append((row[x] << 4) | row[x + 1])
         assert len(data) < 65536
         fold = one and scale == 1 and (first, last) == (32, 255)
-        if fold:                                       # the fble build: only the bitmaps gfx.c glyph() can reach
+        if fold:                                       # the fext build: only the bitmaps gfx.c glyph() can reach
             size = len(data) // len(glyphs)
             fdata, foffs = folded(data, offs, first, size)
             rows = narrow(fdata, h, glyphs[0][1], size)
             if rows is not None:                       # (a row a byte: 16 bytes a glyph instead of 24)
                 foffs = [o // size * h for o in foffs]
                 fdata = rows
-            lines.append("#if FELUCCA_FBLE   /* (tools/gen_font.py folded(): the glyphs glyph() draws, each once) */")
-            lines.append(f"#define FONT_1BIT {1 if rows is None else 2}   /* the fble build: {'1 bit a pixel' if rows is None else 'a row a byte, the PAD columns not stored'} */")
+            lines.append("#if FELUCCA_FEXT   /* (tools/gen_font.py folded(): the glyphs glyph() draws, each once) */")
+            lines.append(f"#define FONT_1BIT {1 if rows is None else 2}   /* the fext build: {'1 bit a pixel' if rows is None else 'a row a byte, the PAD columns not stored'} */")
             lines.append(f"static const uint8_t FONT_{name}_DATA[{len(fdata)}] = {{")
             for i in range(0, len(fdata), 24):
                 lines.append("    " + ", ".join(f"0x{b:02x}" for b in fdata[i:i + 24]) + ",")
@@ -240,7 +240,7 @@ def main(out):
         if scale == 1:
             base = (name, first, h, glyphs, bits)
         print(f"font {name}: {ttf} {px}px h {h}, digit adv {glyphs[ord('0') - first][0]}, {len(data)} B" +
-              (f" (the fble build: {len(fdata)} B)" if fold else ""))
+              (f" (the fext build: {len(fdata)} B)" if fold else ""))
     Path(out).write_text("\n".join(lines))
 
 

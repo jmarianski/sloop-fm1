@@ -11,7 +11,7 @@
 #include "fm1_audio.h"
 #include "fm1_adc.h"
 #include "fm1_lcd_hw.h"
-#if FELUCCA_FBLE
+#if FELUCCA_FEXT
 #include "fm1_clock.h"
 #include "fm1_power.h"     /* (MPL-2.0, fm1-base) the 1.3 V on the DC-DC, the radio's regulator automatic */     /* (MPL-2.0, fm1-base) the stock 360 MHz on PLL1: the Bluetooth radio's calibration needs it */
 #endif
@@ -25,11 +25,11 @@
 #include "cpu1.h"           /* the second core's job API (defined in cpu1.c; the host tests have their own) */
 #include "engines.c"
 #include "drums.c"
-#ifndef FELUCCA_FBLE                     /* (before params.c: its GLO > BLE pages) */
-#define FELUCCA_FBLE 0           /* the Bluetooth MIDI module's socket (fble_host.c; tools/build.py --fble) */
+#ifndef FELUCCA_FEXT                     /* (before params.c: the module's GLO pages) */
+#define FELUCCA_FEXT 0           /* the socket for an fext module (fext_host.c; tools/build.py --fext) */
 #endif
-#if FELUCCA_FBLE
-#include "fble_host.h"
+#if FELUCCA_FEXT
+#include "fext_host.h"
 #endif
 #ifndef FELUCCA_USB_HOST                 /* (before params.c: its GLO > USB page; usb.c defaults it to 0) */
 #define FELUCCA_USB_HOST 1       /* 2.9: the port as the host of a USB-MIDI controller (GLO > USB > PORT; usb_host.c) */
@@ -205,13 +205,13 @@ static void ota_commit(const uint8_t *parm)
 #if FELUCCA_OTA
 #include "editor.c"          /* web editor SysEx (needs the OTA SysEx plumbing) */
 #endif
-#if FELUCCA_FBLE
+#if FELUCCA_FEXT
 #if !FELUCCA_OTA || !FELUCCA_FLASH
-#error "FELUCCA_FBLE needs FELUCCA_OTA and FELUCCA_FLASH (its SysEx, its flash)"
+#error "FELUCCA_FEXT needs FELUCCA_OTA and FELUCCA_FLASH (its SysEx, its flash)"
 #endif
-#include "fble_load.h"
-#include "fble_name.h"        /* the devices' names as the font draws them (MPL-2.0) */
-#include "fble_host.c"       /* the Bluetooth module: loader, host services, SysEx "FB", GLO > BLE (MPL-2.0) */
+#include "fext_load.h"
+#include "fext_text.h"        /* the module's texts as the font draws them (MPL-2.0) */
+#include "fext_host.c"       /* an fext module: loader, host services, SysEx "FB", its GLO pages (MPL-2.0) */
 #endif
 #if FELUCCA_CDC
 #include "console.c"

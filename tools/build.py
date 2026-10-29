@@ -3,12 +3,12 @@
 # Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
 """Build Felucca: the app, the update loader and an installable .fwsc package.
 
-  tools/build.py [--release X.Y[-suffix]] [--fble]
+  tools/build.py [--release X.Y[-suffix]] [--fext]
 
 Outputs in build/: felucca.bin (app), loader/ota.bin (update loader),
 felucca.fwsc (package). See BUILDING.md for the toolchain and the SDK.
---fble: the build with the Bluetooth module's loader and the GLO > BLE pages
-(FELUCCA_FBLE=1, firmware/src/fble_host.c), in build/fble/: felucca-fble.fwsc.
+--fext: the build with the socket for an fext module (one written into USR4 on its own: Bluetooth MIDI, fble, is
+the first) and its pages under GLO (FELUCCA_FEXT=1, firmware/src/fext_host.c), in build/fext/: felucca-fext.fwsc.
 
 The JieLi toolchain is Linux x86-64 only. JIELI_TOOLCHAIN points at it; on
 macOS (or with JIELI_DOCKER=1) each tool runs in a linux/amd64 container.
@@ -182,7 +182,7 @@ def build_loader():
 def build_app():
     flags = [*CFLAGS, "-Ifirmware/hal", "-Ifirmware/src", "-Ibuild/gen"]
     for flag in ("FELUCCA_FLASH", "FELUCCA_OTA", "FELUCCA_OTA_DRYRUN", "FELUCCA_CDC", "FELUCCA_UART",
-                 "FELUCCA_ICONS", "FELUCCA_SLICE", "FELUCCA_CPU1", "FELUCCA_LOGO_TEXT", "FELUCCA_FBLE"):
+                 "FELUCCA_ICONS", "FELUCCA_SLICE", "FELUCCA_CPU1", "FELUCCA_LOGO_TEXT", "FELUCCA_FEXT"):
         v = os.environ.get(flag)    # unset: the default in firmware/src/felucca.c
         if v in ("0", "1"):
             flags.append(f"-D{flag}={v}")
@@ -195,7 +195,7 @@ def build_app():
            ("cc", "-c", FW / "hal" / "fm1_cpu1.S", "-o", OUT / "fm1_cpu1.o"),
            ("cc", *flags, "-c", FW / "src" / "felucca.c", "-o", OUT / "felucca.o"))
     elf = OUT / "felucca.elf"
-    tc("pi32v2/bin/ld", "-T", fble_ld() if FBLE else FW / "app.ld", OUT / "crt0.o", OUT / "fm1_vec.o", OUT / "fm1_isr.o",
+    tc("pi32v2/bin/ld", "-T", fext_ld() if FEXT else FW / "app.ld", OUT / "crt0.o", OUT / "fm1_vec.o", OUT / "fm1_isr.o",
        OUT / "fm1_cpu1.o", OUT / "felucca.o", "-o", elf)
     for sect in ("text.bin", "data.bin", "ramtext.bin", "c1text.bin"):
         (OUT / sect).unlink(missing_ok=True)
@@ -228,37 +228,40 @@ def build_app():
     return bytes(img), syms, dis, rt
 
 
-# ---- the fble build (--fble): the Bluetooth module's RAM windows kept free
+# ---- the fext build (--fext): a module's RAM windows kept free
 
-FBLE = False                        # --fble: FELUCCA_FBLE=1, build/fble/, app_fble.ld from fble.h's windows
+FEXT = False                        # --fext: FELUCCA_FEXT=1, build/fext/, app_fext.ld from fext_host.h's windows
 
 
-def fble_windows():
-    """fble.h's FBLE_{RT,LOW,ANY}_{LO,HI}: the one place the windows are written down"""
-    w = dict((m[1], int(m[2], 16)) for m in re.finditer(r"^#define\s+FBLE_((?:RT|LOW|ANY)_(?:LO|HI))\s+0x([0-9A-Fa-f]+)u?",
-                                                         (FW / "src" / "fble.h").read_text(), re.M))
+def fext_windows():
+    """fext_host.h's FEXT_{CODE,DMA,RAM}_{LO,HI} (as RT, LOW, ANY: app_fext.ld.in's names): the one place the windows
+    are written down"""
+    kind = {"CODE": "RT", "DMA": "LOW", "RAM": "ANY"}
+    w = dict((kind[m[1]] + "_" + m[2], int(m[3], 16)) for m in
+             re.finditer(r"^#define\s+FEXT_(CODE|DMA|RAM)_(LO|HI)\s+0x([0-9A-Fa-f]+)u?",
+                         (FW / "src" / "fext_host.h").read_text(), re.M))
     if len(w) != 6:
-        raise SystemExit("fble: firmware/src/fble.h: FBLE_{RT,LOW,ANY}_{LO,HI} not all found")
+        raise SystemExit("fext: firmware/src/fext_host.h: FEXT_{CODE,DMA,RAM}_{LO,HI} not all found")
     return w
 
 
-def fble_ld():
-    """build/fble/app_fble.ld: firmware/app_fble.ld.in with fble.h's windows, after checking they lie where app.ld's
+def fext_ld():
+    """build/fext/app_fext.ld: firmware/app_fext.ld.in with fext_host.h's windows, after checking they lie where app.ld's
     layout has room for them: rt at the top of RAMTEXT (below 0x01C07F00, crt0's STATUS), low at the bottom of the RAM
     region (from 0x01C08000), any at its top (up to the pool, 0x01C20000)"""
-    w = fble_windows()
+    w = fext_windows()
     ok = (0x01C00000 < w["RT_LO"] < w["RT_HI"] <= 0x01C07F00 and w["LOW_LO"] == 0x01C08000 and
           w["LOW_LO"] < w["LOW_HI"] < w["ANY_LO"] < w["ANY_HI"] <= 0x01C20000 and
           all(v % 256 == 0 for v in w.values()))
     if not ok:
-        raise SystemExit("fble: fble.h's windows do not fit SLOOP's layout (firmware/app_fble.ld.in): " +
+        raise SystemExit("fext: fext_host.h's windows do not fit SLOOP's layout (firmware/app_fext.ld.in): " +
                          ", ".join(f"{k} {v:#x}" for k, v in sorted(w.items())))
     sub = {"RT_LO": w["RT_LO"], "RT_HI": w["RT_HI"], "LOW_LO": w["LOW_LO"], "LOW_HI": w["LOW_HI"],
            "ANY_LO": w["ANY_LO"], "ANY_HI": w["ANY_HI"], "RAMTEXT_LEN": w["RT_LO"] - 0x01C00000,
            "RT_LEN": w["RT_HI"] - w["RT_LO"], "LOW_LEN": w["LOW_HI"] - w["LOW_LO"],
            "RAM_LEN": w["ANY_LO"] - w["LOW_HI"], "ANY_LEN": w["ANY_HI"] - w["ANY_LO"]}
-    text = re.sub(r"@(\w+)@", lambda m: f"{sub[m[1]]:#010x}", (FW / "app_fble.ld.in").read_text())
-    out = OUT / "app_fble.ld"
+    text = re.sub(r"@(\w+)@", lambda m: f"{sub[m[1]]:#010x}", (FW / "app_fext.ld.in").read_text())
+    out = OUT / "app_fext.ld"
     out.write_text(text)
     return out
 
@@ -292,20 +295,21 @@ def check(img, syms, dis, rt):
     def sym(name):
         mm = re.search(r"^([0-9a-f]+) .*\s" + name + r"$", syms, re.M)
         return int(mm.group(1), 16) if mm else 0
-    ram_lo, ram_hi = sym("_ram_lo") or 0x01C08000, sym("_ram_hi") or 0x01C08000 + 96 * 1024   # (--fble: its own)
-    lr_hi = sym("_fble_rt_lo") or 0x01C07F00
+    ram_lo, ram_hi = sym("_ram_lo") or 0x01C08000, sym("_ram_hi") or 0x01C08000 + 96 * 1024   # (--fext: its own)
+    lr_hi = sym("_fext_code_lo") or 0x01C07F00
     bss = (sym("_ram_used_end") or sym("_bss_end")) - ram_lo
     pool = sym("_pool_end") - sym("_pool_start")
     lowram = sym("_lr_end") - sym("_lr_start")    # the SRAM below the RAM region (app.ld .lowram), up to 0x01C07F00
     notes.append(f"image {len(img)} B; RAM .data+.bss {bss} B of {ram_hi - ram_lo}; lowram {lowram} B of "
                  f"{lr_hi - sym('_lr_start')}; pool {pool} B of {0x54000}")
-    if FBLE:
-        w = fble_windows()
-        notes.append("fble windows: " + ", ".join(f"{k.lower()} {w[k + '_LO']:#010x}..{w[k + '_HI']:#010x} "
-                                                   f"({w[k + '_HI'] - w[k + '_LO']} B)" for k in ("RT", "LOW", "ANY")) +
+    if FEXT:
+        w = fext_windows()
+        notes.append("fext windows: " + ", ".join(f"{n} {w[k + '_LO']:#010x}..{w[k + '_HI']:#010x} "
+                                                   f"({w[k + '_HI'] - w[k + '_LO']} B)"
+                                                   for n, k in (("code", "RT"), ("dma", "LOW"), ("ram", "ANY"))) +
                      f"; RAM region {ram_lo:#010x}..{ram_hi:#010x}")
-        if (sym("_fble_rt_lo"), sym("_fble_low_lo"), sym("_fble_any_hi")) != (w["RT_LO"], w["LOW_LO"], w["ANY_HI"]):
-            errors.append("fble: the linked windows are not fble.h's")
+        if (sym("_fext_code_lo"), sym("_fext_dma_lo"), sym("_fext_ram_hi")) != (w["RT_LO"], w["LOW_LO"], w["ANY_HI"]):
+            errors.append("fext: the linked windows are not fext_host.h's")
     if bss > ram_hi - ram_lo:
         errors.append("RAM region overflow")
     if 0x54000 - pool < 8192:                     # keep >= 8 KiB of the pool spare
@@ -358,30 +362,30 @@ def mmio_check():
 
 
 def main():
-    global PRODUCT, VERSION, FBLE, OUT, LDR
+    global PRODUCT, VERSION, FEXT, OUT, LDR
     ap = argparse.ArgumentParser()
     ap.add_argument("--release", metavar="X.Y", help="release build: identity FM-1_9XY, version string X.Y")
     ap.add_argument("--sdk", type=Path, help="JieLi AC79 SDK checkout (default: $AC79_SDK)")
-    ap.add_argument("--fble", action="store_true",
-                    help="the Bluetooth module's loader and GLO > BLE (FELUCCA_FBLE=1), in build/fble/")
+    ap.add_argument("--fext", action="store_true",
+                    help="the socket for an fext module in USR4 and its pages (FELUCCA_FEXT=1), in build/fext/")
     a = ap.parse_args()
     name = "felucca.fwsc"
-    if a.fble:
-        FBLE = True
-        os.environ["FELUCCA_FBLE"] = "1"
+    if a.fext:
+        FEXT = True
+        os.environ["FELUCCA_FEXT"] = "1"
         # the boot logo as text from the start (the image logo does not fit beside the socket: the room saved for the
         # socket's next changes is not taken back by it; FELUCCA_LOGO_TEXT=0 still asks for the image)
         os.environ.setdefault("FELUCCA_LOGO_TEXT", "1")
-        OUT = SRC / "build" / "fble"    # (GEN stays build/gen: the generated headers are the same)
+        OUT = SRC / "build" / "fext"    # (GEN stays build/gen: the generated headers are the same)
         LDR = OUT / "loader"
-        name = "felucca-fble.fwsc"
+        name = "felucca-fext.fwsc"
     if a.release:                   # one digit each: the identity has room for two
         m = re.fullmatch(r"(\d)\.(\d)(-[A-Za-z0-9]+)?", a.release)
         if not m:
             raise SystemExit(f"--release {a.release}: use X.Y or X.Y-suffix, one digit each")
         PRODUCT = "FM-1_9" + m[1] + m[2]
         VERSION = a.release.upper() if "BETA" in a.release.upper() else a.release.upper() + " BETA"
-        name = f"felucca-{a.release}{'-fble' if a.fble else ''}.fwsc"
+        name = f"felucca-{a.release}{'-fext' if a.fext else ''}.fwsc"
     fm1pkg_make.SDK = a.sdk
     for rel, sha in SDK_SHA256.items():          # fail early without the SDK
         if hashlib.sha256(fm1pkg_make.sdk_file(rel)).hexdigest() != sha:

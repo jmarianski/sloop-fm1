@@ -509,9 +509,9 @@ UI_SMALL static void edit_param(uint32_t slot, int32_t steps)
         tracks_edit(slot, steps);
         return;
     }
-#if FELUCCA_FBLE
-    if (pg->graph == GR_BLE || pg->graph == GR_BLE2) {    /* GLO > BLE, BLE 2 (fble_host.c) */
-        fble_knob(pg->graph == GR_BLE2, slot, steps);
+#if FELUCCA_FEXT
+    if (pg->graph == GR_EXT || pg->graph == GR_EXT2) {    /* the module's pages (fext_host.c) */
+        fext_knob(pg->graph == GR_EXT2, slot, steps);
         return;
     }
 #endif
@@ -1337,8 +1337,8 @@ UI_SMALL static void ui_input(void)
         if ((s = panel_enc(EN_K1 + k)) == 0)
             continue;
         if (ui.home || pg->scope == SC_STEP || pg->scope == SC_TRK || page_desc(pg, k, &hv) ||
-#if FELUCCA_FBLE
-            pg->graph == GR_BLE || (pg->graph == GR_BLE2 && k < 3u) ||
+#if FELUCCA_FEXT
+            ((pg->graph == GR_EXT || pg->graph == GR_EXT2) && fext_col_used(pg->graph == GR_EXT2, k)) ||
 #endif
             (pg->graph == GR_USER && k == 0u)) {     /* (not an empty column, nor "DRUM TRACK") */
             ui.hot_col = (uint8_t)k;

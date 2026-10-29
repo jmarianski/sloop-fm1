@@ -388,8 +388,8 @@ enum { FAM_HOME, FAM_ENV, FAM_LFO, FAM_FX, FAM_SCL, FAM_EDIT, FAM_GLO, FAM_SAVE,
 enum { SC_TRACK, SC_GLOBAL, SC_ENGINE, SC_STEP, SC_TRK, SC_SONG, SC_DRUM };
 enum { GR_NONE, GR_ADSR, GR_LFO, GR_STEPS, GR_ARP, GR_SCALE, GR_FX, GR_ROLL, GR_BROWSE, GR_SLOTS, GR_USER, GR_TRK,
        GR_SLCR, GR_INS
-#if FELUCCA_FBLE
-       , GR_BLE, GR_BLE2         /* GLO > BLE, BLE 2: the Bluetooth module's pages (fble_host.c) */
+#if FELUCCA_FEXT
+       , GR_EXT, GR_EXT2         /* GLO > the module's pages (fext_host.c: fble's BLE, BLE 2) */
 #endif
 };
 
@@ -433,9 +433,9 @@ static const page_t PAGES[] = {
 #if defined FELUCCA_USB_HOST && FELUCCA_USB_HOST
     {"USB", FAM_GLO, SC_GLOBAL, GR_NONE, {G_USBPORT, 0xFF, 0xFF, 0xFF}},   /* 2.9: the port, DEVICE or HOST (usb_host.c) */
 #endif
-#if FELUCCA_FBLE
-    {"BLE", FAM_GLO, SC_GLOBAL, GR_BLE, {0xFF, 0xFF, 0xFF, 0xFF}},    /* Bluetooth: RADIO MODE LIST USE (fble_host.c) */
-    {"BLE 2", FAM_GLO, SC_GLOBAL, GR_BLE2, {0xFF, 0xFF, 0xFF, 0xFF}}, /* PC RECON OUT; the settings are not song.g's */
+#if FELUCCA_FEXT
+    {fext_title[0], FAM_GLO, SC_GLOBAL, GR_EXT, {0xFF, 0xFF, 0xFF, 0xFF}},    /* the module's pages, its titles (fext_host.c); */
+    {fext_title[1], FAM_GLO, SC_GLOBAL, GR_EXT2, {0xFF, 0xFF, 0xFF, 0xFF}},   /* its settings are its own, not song.g's */
 #endif
     {"TEXTURE", FAM_GLO, SC_GLOBAL, GR_NONE, {G_TXSRC, G_TXLVL, G_TXTONE, G_TXMOVE}},   /* 2.6: the bed under the mix */
     {"TEXTURE 2", FAM_GLO, SC_GLOBAL, GR_NONE, {G_TXRATE, G_TXWHEN, G_TXDUCK, 0xFF}},
@@ -471,6 +471,10 @@ static int page_for_drum(const page_t *pg)
 /* a page the buttons and SELECT reach on the selected track: EDIT > FILTER (TYPE) on ANALOG only */
 static int page_shown(const page_t *pg)
 {
+#if FELUCCA_FEXT
+    if (pg->graph == GR_EXT2)
+        return fext_pages() > 1u;                  /* (a module of one page: no second) */
+#endif
     return pg->id[0] != P_FTYPE || (!is_drum(TSEL) && TSEL->eng_req % NENGINES == 0u);
 }
 

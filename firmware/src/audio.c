@@ -59,8 +59,8 @@ void fm1_alnk0_irq(void)                       /* via isr_alnk0 (hal/fm1_isr.S) 
     if (p & FM1_AUDIO_HALF) {
         uint32_t half = fm1_audio_free_half(), b, us;
         int32_t *o = &abuf[half * HALF_WORDS];
-#if FELUCCA_FBLE
-        if (fble_quiet) {                               /* the Bluetooth radio calibrates (~1 s, fble_host.c): no
+#if FELUCCA_FEXT
+        if (fext_quiet) {                               /* a module's radio calibrates (~1 s, fext_host.c): no
                                                          * render, no XIP reads from here; silence meanwhile */
             for (b = 0; b < HALF_WORDS; b++)
                 o[b] = 0;

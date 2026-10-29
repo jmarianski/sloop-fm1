@@ -179,8 +179,8 @@ static int usb_midi_out_ready(void);
 /* one event packet to the out ring, 0 when nothing listens or it is full (from the audio ISR) */
 static int midi_out_try(uint32_t pkt)
 {
-#if FELUCCA_FBLE
-    fble_midi_out(pkt);                             /* (GLO > BLE 2 > OUT: a copy to Bluetooth, fble_host.c) */
+#if FELUCCA_FEXT
+    fext_midi_out(pkt);                             /* (a copy to the module's ports it asks for: fext_host.c) */
 #endif
     if (!usb_midi_out_ready() || mo_w - mo_r >= MQ)
         return 0;
