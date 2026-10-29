@@ -152,6 +152,22 @@ run "USB MIDI host: never in the update loader (FELUCCA_LOADER)" "$OUT/usb_host_
 usbh_in_app() { ${CC%% *} -E -Ibuild/gen -Ifirmware/hal -Ifirmware/src firmware/src/felucca.c 2>/dev/null | grep -q usb_host_task; }
 run "USB MIDI host: built into the firmware (GLO > USB > PORT)" usbh_in_app
 
+# the Bluetooth module's loader (FELUCCA_FBLE, src/fble.h, fble_load.h, MPL-2.0: tests/fble_test.c): a module made for
+# SLOOP's windows, what must be refused (segment 1, MIDIMON's windows, loads into SLOOP's RAM), the write frames; with the
+# module linked for SLOOP (fble's sh build.sh fble-sloop; FBLE_BUILD, by default the MIDIMON worktree next to this one)
+# also the real image and fble_push.py's frames
+$CC -Ifirmware/src -o "$OUT/fble_test" tests/fble_test.c
+FBLE_BUILD="${FBLE_BUILD:-../midimonitor_fm1/fble/build-sloop}"
+if [ -f "$FBLE_BUILD/fble_seg0.bin" ] && [ -f "$FBLE_BUILD/fble_push.frames" ]; then
+    run "Bluetooth module loader: checks, frames, the module linked for SLOOP" "$OUT/fble_test" \
+        "$FBLE_BUILD/fble_seg0.bin" "$FBLE_BUILD/fble_push.frames"
+else
+    run "Bluetooth module loader: checks, frames (no module image in \$FBLE_BUILD)" "$OUT/fble_test"
+fi
+fble_in_app() { ${CC%% *} -E -DFELUCCA_FBLE=1 -Ibuild/gen -Ifirmware/hal -Ifirmware/src firmware/src/felucca.c 2>/dev/null | grep -q fble_service &&
+    ! ${CC%% *} -E -Ibuild/gen -Ifirmware/hal -Ifirmware/src firmware/src/felucca.c 2>/dev/null | grep -q fble_service; }
+run "Bluetooth module host: only in the FELUCCA_FBLE build" fble_in_app
+
 $CC -o "$OUT/ota_test" tests/ota_test.c
 run "M-UPGRADE entry" "$OUT/ota_test" build/felucca.fwsc
 

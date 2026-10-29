@@ -13,7 +13,7 @@ Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
 ## What is code (GPL-3.0-only)
 
 Every file in this tree that carries an `SPDX-License-Identifier: GPL-3.0-only` header (a few source files
-carry another: `firmware/src/fm6_core.c`, msfa, Apache-2.0, and the USB MIDI host, MPL-2.0, both below; the
+carry another: `firmware/src/fm6_core.c`, msfa, Apache-2.0, the USB MIDI host and the fble socket, MPL-2.0, all below; the
 firmware built with them is GPL-3.0-only as a whole):
 
 - the firmware: `firmware/` (app, HAL, update loader)
@@ -50,6 +50,24 @@ toggle and retry fixes), `b4380f9` (Kerem's MIDI output, endpoint checks, ACK ow
 `eb57309` (Kerem's disconnect debounce), `44a311a` (Kerem's idle probe and hub connection-change fixes); felucca-bsp's
 `NOTICE` has their full hashes. The register sequences follow the public JieLi AC79 SDK; no SDK source is copied.
 
+## Bluetooth MIDI socket (FELUCCA_FBLE, MPL-2.0)
+
+The socket for fble, the separately installed Bluetooth MIDI module (`tools/build.py --fble`; not in the default
+build), is Jacek Mariański's, MPL-2.0 as fble's own files are:
+
+- `firmware/src/fble.h`, `firmware/src/fble_load.h` (the module's interface and loader check, copies of fm1-base's of
+  fble's milestone M5 with SLOOP's RAM windows), `firmware/src/fble_host.c`, `firmware/src/fble_host.h`,
+  `tests/fble_test.c`: MPL-2.0 (their headers). `fble_host.c`'s log and interrupt attach follow Charles Vestal's
+  fm1-base `device/radio.c`, and its central (FIRST / CHOOSE / reconnect) follows ignis32's MIDIMON `app/ble.c`, both
+  MPL-2.0;
+- the hooks around it (`main.c`, `usb.c`, `audio.c`, `editor.c`, `params.c`, `ui_draw.c`, `ui_input.c`,
+  `hal/fm1_guard.h`, `hal/fm1_flash.h`, `firmware/app_fble.ld.in`, `tools/build.py`): GPL-3.0-only, as the files.
+
+As with the USB MIDI host, a firmware containing them is GPL-3.0-only as a whole. The module itself is not part of
+this tree and is not linked into the firmware: it is written into the flash on its own and contains JieLi's
+Bluetooth libraries (binary, Apache-2.0 SDK). The FBLE build is for now a private build (GPL-3.0 allows private
+use); a distributable one needs the questions in fble's `docs/BLE_MODULE.md` (licence section) answered first.
+
 ## Additional permission (GPL-3.0 section 7)
 
 As an additional permission under GPL-3.0 section 7, you may combine Felucca, or a work
@@ -76,6 +94,7 @@ assets, is entirely governed by the GPL.
 | msfa by Google Inc. and Pascal Gauthier, from Dexed (<https://github.com/asb2m10/dexed>): the FM6 engine's synthesis (SLOOP 2.4), ported to integer C for Felucca 1.0 by Leo Kuroshita (Dexed itself is GPL-3.0; only msfa is used; the FM6 factory patches are Felucca's own) | Apache-2.0 | `firmware/src/fm6_core.c`, `LICENSES/Apache-2.0-msfa.txt` |
 | DaisySP (Electrosmith, Emilie Gillet) and Rings' sympathetic strings (Emilie Gillet): the PHYS engine's models (SLOOP 2.5, from Felucca 1.0, ported to fixed point by Leo Kuroshita) | MIT | `firmware/src/phys_dsp.c`, `firmware/src/phys_symp.c` (the notice is in each file) |
 | USB MIDI host by Adrien Tibi and Kerem Kilic, from Melodee (<https://github.com/keremimo/melodee>) by way of felucca-bsp pull request #7 (<https://github.com/hugelton/felucca-bsp/pull/7>): SLOOP 2.9's GLO → USB → PORT = HOST (above) | MPL-2.0 | `firmware/src/usb_host.c`, `usb_host_desc.h`, the host routines in `firmware/hal/fm1_usb.h`, `tests/usb_host_test.c`, `LICENSES/MPL-2.0.txt` |
+| fble socket (Bluetooth MIDI module host, FELUCCA_FBLE builds only) by Jacek Mariański, after fm1-base by Charles Vestal (<https://github.com/charlesvestal/fm1-base>) and MIDIMON by ignis32 (<https://github.com/ignis32/midimonitor_fm1>) (above) | MPL-2.0 | `firmware/src/fble.h`, `fble_load.h`, `fble_host.c`, `fble_host.h`, `tests/fble_test.c` |
 | JieLi AC79 SDK: `uboot.boot`, `cfg_tool.bin`, `eq_cfg_hw.bin` are read from your SDK checkout at build time and placed in the package; no SDK files are in this tree | Apache-2.0 | <https://gitee.com/Jieli-Tech/fw-AC79_AIoT_SDK> |
 
 ## Contributions
@@ -93,4 +112,6 @@ by those owners.
 
 ## Radio
 
-Felucca never enables the Bluetooth / Wi-Fi radio of the hardware.
+Felucca never enables the Bluetooth / Wi-Fi radio of the hardware in its default build. Only an FBLE build
+(`tools/build.py --fble`) with a separately installed Bluetooth module, and GLO → BLE → RADIO set to ON by the
+user, turns on the Bluetooth radio; the Wi-Fi radio is never enabled.
