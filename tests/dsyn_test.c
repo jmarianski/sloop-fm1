@@ -50,6 +50,26 @@ static void ed_pack7(const uint8_t *p, uint32_t n)
 static int fails;
 static void check(int ok, const char *what) { printf("dsyn: %-78s %s\n", what, ok ? "ok" : "FAIL"); fails += !ok; }
 
+/* a factory kit's 16 sounds, one after the other (DS_SHARED, the fble build: gathered from DS_SND; four at a time) and
+ * the address a voice of it reads */
+#if DS_SHARED
+static const dsnd_t *KS(uint32_t k)
+{
+    static dsnd_t x[4][DS_LANES];
+    static uint32_t n;
+    dsnd_t *p = x[n++ & 3u];
+    uint32_t i;
+    for (i = 0; i < DS_LANES; i++)
+        p[i] = DS_SND[DS_KITS[k].s[i]];
+    return p;
+}
+#define KP(k, l) (&DS_SND[DS_KITS[k].s[l]])
+#else
+#define KS(k) ((const dsnd_t *)DS_KITS[k].s)
+#define KP(k, l) (&DS_KITS[k].s[l])
+#endif
+#define KS_SIZE (DS_LANES * sizeof(dsnd_t))
+
 /* lane l of the 16 sounds snd, 120 blocks of the voice alone, into o; returns the samples */
 static int32_t outbuf[2][120 * CTL];
 static void voice_render(int32_t *o, const dsnd_t *snd, uint32_t crush, uint32_t l)
@@ -57,7 +77,7 @@ static void voice_render(int32_t *o, const dsnd_t *snd, uint32_t crush, uint32_t
     static dsv_t v;
     uint32_t blk;
     rng_state = 0x1234567u;                             /* (the noise's seed) */
-    ds_on(&v, snd, crush, DS_LANE_NOTE[l], 110, 0, 4u);   /* (as designed: TUNE 0, DECAY 0) */
+    ds_on(&v, snd, crush, DS_LANE_NOTE[l], 110, 0, 4u DS_FKA(0));   /* (as designed: TUNE 0, DECAY 0) */
     for (blk = 0; blk < 120u; blk++)
         if (!ds_render(&v, o + blk * CTL, CTL))
             memset(o + blk * CTL, 0, CTL * sizeof(int32_t));
@@ -132,19 +152,19 @@ int main(void)
     (void)dsu_kit(0);
     ok = 1;
     for (k = 0; k < DSU_N; k++)
-        ok &= !memcmp(dsu.k[k].s, DS_KITS[DSU_DEF[k]].s, sizeof dsu.k[k].s) && dsu.k[k].crush == DS_KITS[DSU_DEF[k]].crush &&
+        ok &= !memcmp(dsu.k[k].s, KS(DSU_DEF[k]), KS_SIZE) && dsu.k[k].crush == DS_KITS[DSU_DEF[k]].crush &&
               !strncmp(dsu.k[k].name, DS_KITS[DSU_DEF[k]].name, 8) && dsu.k[k].src == DSU_DEF[k];
     check(ok && !strcmp(DS_KITS[DSU_DEF[0]].name, "808") && !strcmp(DS_KITS[DSU_DEF[3]].name, "TECHNO"),
           "never stored: SYN1..4 = 808, 909, TRAP, TECHNO");
     {
         uint32_t d[DS_LANES], act = 0;
-        check(lanes_same(DS_KITS[0].s, DS_KITS[0].crush, dsu.k[0].s, dsu.k[0].crush, 0),
+        check(lanes_same(KS(0), DS_KITS[0].crush, dsu.k[0].s, dsu.k[0].crush, 0),
               "SYN1 (808) plays the 16 sounds bit for bit as the 808 kit");
         dsu.k[0].s[0].decay = (uint8_t)(dsu.k[0].s[0].decay - 30u);
-        lanes_same(DS_KITS[0].s, DS_KITS[0].crush, dsu.k[0].s, dsu.k[0].crush, d);
+        lanes_same(KS(0), DS_KITS[0].crush, dsu.k[0].s, dsu.k[0].crush, d);
         check(d[0] > 1000u && d[DS_LANES - 1u] == d[0], "an edit (the kick's decay) is heard on that sound only");
         dsu.k[0].s[0].decay = (uint8_t)(dsu.k[0].s[0].decay + 30u);
-        check(lanes_same(DS_KITS[0].s, DS_KITS[0].crush, dsu.k[0].s, dsu.k[0].crush, 0), "... undone: bit for bit again");
+        check(lanes_same(KS(0), DS_KITS[0].crush, dsu.k[0].s, dsu.k[0].crush, 0), "... undone: bit for bit again");
         for (i = 0; i < NDRUM; i++)
             drums.v[i].active = 0;
         TDRUM->p[P_E0] = (int16_t)(DRUM_SYN + 2u);
@@ -154,7 +174,7 @@ int main(void)
         TDRUM->p[P_E0] = (int16_t)(DRUM_SAMPLED + 5u);
         drum_on(38, 100);
         for (i = 0; i < NDRUM; i++)
-            act += drums.v[i].active && drums.synth[i] && drums.ds[i].d == &DS_KITS[5].s[1];
+            act += drums.v[i].active && drums.synth[i] && drums.ds[i].d == KP(5, 1);
         check(act == 2u, "KIT = SYN3 plays its own sounds (RAM); the factory kits theirs");
     }
     /* the editor's commands */
@@ -170,7 +190,7 @@ int main(void)
         p = 2u + (uint32_t)strlen((char *)ed_out + 2) + 1u;
         k = ed_unpack7(ed_out + p, ed_n - p, got, sizeof got);
         check(ed_out[0] == a && ed_out[1] == 0 && !strcmp((char *)ed_out + 2, "909") && k == sizeof got - 0u &&
-              got[0] == DS_KITS[1].crush && got[1] == 1 && !memcmp(got + 2, DS_KITS[1].s, sizeof DS_KITS[1].s),
+              got[0] == DS_KITS[1].crush && got[1] == 1 && !memcmp(got + 2, KS(1), KS_SIZE),
               "DSYN_GET SYN2: name, crush, the kit it came from, its 16 sounds");
         a = 99;
         ed_n = 0;
@@ -187,7 +207,7 @@ int main(void)
               "DSYN_PUT a sound of 0xFF bytes: written, every value in range, not stored");
         check(put(2, 16, hdr, 10) == 0 && !memcmp(dsu.k[2].name, "MY KIT\0\0", 8) && dsu.k[2].crush == 0x21 && dsu.k[2].src == 3,
               "DSYN_PUT the name, the crush, its source");
-        check(put(3, 17, &src, 1) == 0 && !memcmp(dsu.k[3].s, DS_KITS[5].s, sizeof dsu.k[3].s) && !strcmp(dsu.k[3].name, "TRAP"),
+        check(put(3, 17, &src, 1) == 0 && !memcmp(dsu.k[3].s, KS(5), KS_SIZE) && !strcmp(dsu.k[3].name, "TRAP"),
               "DSYN_PUT 17: SYN4 = a copy of a factory kit");
         check(put(4, 0, ff, 22) == 1 && put(0, 0, ff, 21) == 1 && put(0, 18, ff, 1) == 1, "DSYN_PUT: no such kit / part, a short sound: rc 1");
         ed_n = 0;
@@ -244,9 +264,9 @@ int main(void)
         for (kk = 0; kk < DS_NKITS; kk++) {
             double edge = 0, in = 0;
             uint32_t ne = 0, ni = 0, j;
-            if (DS_KITS[kk].s[0].wave == DW_SQUARE || DS_KITS[kk].s[0].wave == DW_BELL)
+            if (KP(kk, 0)->wave == DW_SQUARE || KP(kk, 0)->wave == DW_BELL)
                 continue;                                   /* (square waves: their own edges everywhere) */
-            voice_render(outbuf[0], DS_KITS[kk].s, 0, 0);   /* (no crush: its hold is a step of its own) */
+            voice_render(outbuf[0], KS(kk), 0, 0);   /* (no crush: its hold is a step of its own) */
             for (j = 10u * CTL; j < 110u * CTL; j++) {
                 double d3 = fabs((double)outbuf[0][j] - 3.0 * outbuf[0][j - 1] + 3.0 * outbuf[0][j - 2] - outbuf[0][j - 3]);
                 if (j % CTL < 3u) edge += d3, ne++;

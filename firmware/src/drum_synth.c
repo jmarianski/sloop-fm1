@@ -33,12 +33,29 @@ typedef struct {
 } dsnd_t;
 #define DS_LANES 16              /* kick snare clap hat open-hat tom-lo tom-hi crash ride shaker conga
                                   * rim cowbell clave kick-2 snare-2 */
+#ifndef DS_SHARED                /* the fble build (the flash is full there): the factory kits' sounds stored once */
+#define DS_SHARED FELUCCA_FBLE
+#endif
 typedef struct {
     const char *name, *style;
     uint8_t crush;               /* low nibble: bits dropped, high nibble: sample-and-hold - 1 */
+#if DS_SHARED
+    uint16_t s[DS_LANES];        /* DS_SHARED: the sounds' indices in DS_SND (308 different ones in the 512) */
+#else
     dsnd_t s[DS_LANES];
+#endif
 } dkit_t;
-#include "felucca_drumkits.h"    /* DS_KITS[], DS_NKITS (tools/gen_drumkits.py) */
+#include "felucca_drumkits.h"    /* DS_KITS[], DS_NKITS (tools/gen_drumkits.py); DS_SHARED: DS_SND[] */
+/* a voice's 16 sounds: a user kit's (snd), or with DS_SHARED a factory kit's (fk, snd 0) */
+#if DS_SHARED
+#define DS_FK , const dkit_t *fk
+#define DS_FKA(x) , x
+#define DS_SOUND(snd, lane) (fk ? &DS_SND[fk->s[lane]] : &(snd)[lane])
+#else
+#define DS_FK
+#define DS_FKA(x)
+#define DS_SOUND(snd, lane) (&(snd)[lane])
+#endif
 
 /* GM note -> synth lane and a pitch offset in semitones */
 static const struct { uint8_t lane; int8_t semi; } DS_MAP[128 - 35] = {
@@ -125,12 +142,13 @@ static const int16_t DS_METAL[6] = {0, 109, 163, 259, 268, 377};
 static const int8_t DK_IDX[8] = {-26, -17, -10, -4, 0, 6, 13, 21};
 static const uint16_t DK_SCALE[8] = {64, 102, 154, 205, 256, 358, 512, 768};
 /* tune16: the sound's TUNE in 1/16 semitones; dsel: its DECAY + 4 (0 .. 7) */
-static void ds_on(dsv_t *s, const dsnd_t *snd, uint32_t crush, uint32_t note, uint32_t vel, int32_t tune16, uint32_t dsel)
+static void ds_on(dsv_t *s, const dsnd_t *snd, uint32_t crush, uint32_t note, uint32_t vel, int32_t tune16, uint32_t dsel
+                  DS_FK)
 {
     int32_t dk = DK_IDX[dsel & 7u];
     int32_t semi;
     uint32_t lane = ds_lane(note, &semi), i;
-    const dsnd_t *d = &snd[lane];
+    const dsnd_t *d = DS_SOUND(snd, lane);
     memset(s, 0, sizeof *s);
     s->d = d;
     s->crush = (uint8_t)crush;
@@ -360,7 +378,12 @@ static void dsu_from_factory(uint32_t k, uint32_t src)
         u->name[i] = f->name[i];
     u->crush = f->crush;
     u->src = (uint8_t)(src % DS_NKITS);
+#if DS_SHARED
+    for (i = 0; i < DS_LANES; i++)
+        u->s[i] = DS_SND[f->s[i]];
+#else
     memcpy(u->s, f->s, sizeof u->s);
+#endif
 }
 static void dsu_defaults(void)
 {

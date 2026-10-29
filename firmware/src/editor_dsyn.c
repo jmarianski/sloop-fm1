@@ -62,7 +62,11 @@ UI_SMALL static int ed_dsyn_handle(uint32_t cmd, const uint8_t *a, uint32_t n)
         uint32_t w = n == 1u ? a[0] : 127u, crush = 0, src = 0;
         char nm[8] = {0};
         if (w < DS_NKITS) {
+#if DS_SHARED
+            s = DS_SND;                                    /* (the kit's sounds lane by lane below) */
+#else
             s = DS_KITS[w].s;
+#endif
             crush = DS_KITS[w].crush;
             src = w;
             for (i = 0; i < 8u && DS_KITS[w].name[i]; i++)
@@ -80,6 +84,11 @@ UI_SMALL static int ed_dsyn_handle(uint32_t cmd, const uint8_t *a, uint32_t n)
             b[0] = (uint8_t)crush;                         /* (one pack7 stream: crush, src, the sounds) */
             b[1] = (uint8_t)src;
             memcpy(b + 2, s, DS_LANES * sizeof(dsnd_t));
+#if DS_SHARED
+            if (w < DS_NKITS)
+                for (i = 0; i < DS_LANES; i++)
+                    memcpy(b + 2 + i * sizeof(dsnd_t), &DS_SND[DS_KITS[w].s[i]], sizeof(dsnd_t));
+#endif
             ed_pack7(b, sizeof b);
         }
         return 1;

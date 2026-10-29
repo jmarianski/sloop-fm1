@@ -245,7 +245,7 @@ static voice_t *drum_pick(uint32_t note)
 }
 /* a synthesised voice: note on the 16 sounds snd (a factory kit, SYN1..4), the oldest voice stolen */
 static void __attribute__((noinline)) drum_synth_on(uint32_t note, uint32_t vel, uint32_t kit, const dsnd_t *snd, uint32_t crush,
-                                                    int tweak)
+                                                    int tweak DS_FK)
 {
     voice_t *v = &drums.v[0];
     uint32_t i;
@@ -269,7 +269,8 @@ static void __attribute__((noinline)) drum_synth_on(uint32_t note, uint32_t vel,
     {
         uint32_t ln = lane_of_note(note);
         tweak = tweak && !DRUM_CLICK(note);
-        ds_on(&drums.ds[i], snd, crush, note, vel, tweak ? drum_tune[ln] * 16 : 0, tweak ? (uint32_t)(drum_dec[ln] + 4) : 4u);
+        ds_on(&drums.ds[i], snd, crush, note, vel, tweak ? drum_tune[ln] * 16 : 0, tweak ? (uint32_t)(drum_dec[ln] + 4) : 4u
+              DS_FKA(fk));
     }
 }
 /* the editor's audition (editor_dsyn.c DSYN_PLAY): queued, played by the audio ISR (drum_audition_poll) */
@@ -282,7 +283,7 @@ static void drum_audition_poll(void)
     dsu_aud_vel = 0;
     {
         const dsu_kit_t *u = dsu_kit(dsu_aud_k);
-        drum_synth_on(DS_LANE_NOTE[dsu_aud_lane % DS_LANES], vel, DRUM_SYN + dsu_aud_k % DSU_N, u->s, u->crush, 0);   /* (as designed) */
+        drum_synth_on(DS_LANE_NOTE[dsu_aud_lane % DS_LANES], vel, DRUM_SYN + dsu_aud_k % DSU_N, u->s, u->crush, 0 DS_FKA(0));   /* (as designed) */
     }
 }
 
@@ -299,7 +300,7 @@ static void drum_on(uint32_t note, uint32_t vel)
         drums.kick = 1;                             /* (DUCK) */
     if (kit >= DRUM_SYN) {                          /* SYN1..SYN4: your synthesised kit */
         const dsu_kit_t *u = dsu_kit(kit - DRUM_SYN);
-        drum_synth_on(note, vel, kit, u->s, u->crush, 1);
+        drum_synth_on(note, vel, kit, u->s, u->crush, 1 DS_FKA(0));
         return;
     }
     if (kit >= DRUM_USR) {                          /* a user kit: the lane's sound, as its note (the hat choke) */
@@ -316,7 +317,11 @@ static void drum_on(uint32_t note, uint32_t vel)
         if (zid < 0)
             return;                                 /* (an empty slot, or no sound on this lane) */
     } else if (kit >= DRUM_SAMPLED) {               /* synthesised kit */
+#if DS_SHARED
+        drum_synth_on(note, vel, kit, 0, DS_KITS[kit - DRUM_SAMPLED].crush, 1, &DS_KITS[kit - DRUM_SAMPLED]);
+#else
         drum_synth_on(note, vel, kit, DS_KITS[kit - DRUM_SAMPLED].s, DS_KITS[kit - DRUM_SAMPLED].crush, 1);
+#endif
         return;
     }
     if (zid < 0) {                                  /* the GM sample kit */
