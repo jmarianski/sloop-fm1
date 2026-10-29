@@ -274,6 +274,17 @@ static int32_t cv_text(int32_t x, int32_t y, const felucca_font_t *f, const char
         const uint8_t *gd;
         w = f->bw[gi];
         gd = f->data + f->off[gi];
+#if FELUCCA_FBLE
+        if (f->bits == 2u) {                           /* the fble build (gen_font.py narrow): a row a byte, the 8
+                                                        * pixels right of the pad (f->pad = FONT_PAD << sh: from x) */
+            for (gy = 0; gy < f->h; gy++)
+                for (gx = 0; gx < (8u << f->sh); gx++)
+                    if ((gd[gy >> f->sh] >> (7u - (gx >> f->sh))) & 1u)
+                        cv_pset(x + (int32_t)gx, y + (int32_t)gy, ramp[15]);
+            x += f->adv[gi];
+            continue;
+        }
+#endif
         if (f->bits == 1u) {                           /* on / off pixels: full colour where a bit is set */
             uint32_t sw = w >> f->sh;
             for (gy = 0; gy < f->h; gy++)
