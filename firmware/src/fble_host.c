@@ -706,6 +706,7 @@ UI_SMALL static void fble_log_frame(void)
 }
 UI_SMALL static void fble_status_text(char *b);
 /* the main loop, between the editor's frames (ed_service) and the update's (ota_service): "FB" and "LG" */
+static void fble_knob(uint32_t page2, uint32_t slot, int32_t steps);
 UI_SMALL static void fble_sysex(void)
 {
     const uint8_t *p;
@@ -794,6 +795,11 @@ UI_SMALL static void fble_sysex(void)
         fble_answer(8, b, 0);
         break;
     }
+    case 9:                                       /* (a test: a knob of GLO > BLE: page, column, steps + 64) */
+        fble_knob(a[1], a[2], (int32_t)a[3] - 64);
+        fble_status_text(b);
+        fble_answer(9, b, 0);
+        break;
     default:
         fble_answer(a[0] & 0x7Fu, "?", 0);
         break;
