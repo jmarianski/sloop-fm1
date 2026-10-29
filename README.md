@@ -1,3 +1,16 @@
+> **Archived fork.** This fork of [SLOOP](https://github.com/isod89/sloop-fm1) carries two additions on top of SLOOP
+> 2.8.3, neither of them maintained:
+>
+> - **USB MIDI host** (GLO > USB > PORT: DEVICE / HOST): the FM-1's USB port drives a USB-MIDI keyboard or controller,
+>   with the host code from felucca-bsp's pull request #7 (Adrien Tibi, Kerem Kilic, from Melodee; MPL-2.0). See
+>   [USB_HOST.md](USB_HOST.md).
+> - **fext**, a generic socket through which the firmware loads a module flashed on its own (ABI 1.0,
+>   `tools/build.py --fext`), made for [fble](https://github.com/jmarianski/fble), a Bluetooth MIDI module. Bluetooth
+>   MIDI on the FM-1 is now done by an open stack with no vendor libraries, in
+>   [Optimist](https://github.com/w0ts/optimist) and [fm1-base](https://github.com/charlesvestal/fm1-base).
+>
+> For anything else use the upstream SLOOP.
+
 <p align="center"><img src="assets/logo/sloop-logo.png" alt="SLOOP" width="420"></p>
 
 <p align="center"><b>A live groovebox firmware for the M-VAVE FM-1 — for any style.</b><br>
@@ -189,7 +202,6 @@ The full list, and what came in 2.0, 2.1 and 2.2: [SLOOP.md](SLOOP.md#new-in-23)
 <p align="center"><img src="assets/screens/editor-pianoroll.png" alt="SLOOP web editor: the piano roll" width="760"></p>
 
 <p align="center"><sub>The piano roll: draw, delete and stretch notes and chords with the mouse; Export MIDI / Import MIDI next to it.</sub></p>
-
 
 ## Features
 
