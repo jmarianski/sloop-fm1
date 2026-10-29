@@ -603,6 +603,7 @@ UI_SMALL static int fble_write(uint32_t off, const uint8_t *raw, int got)
         return 6;                                 /* its code runs from here: restart first */
     if (fble) {
         fble = 0;                                 /* not started: its code is not called again; rewritten */
+        fble_why = "rewritten";
         flog_line("fble: unloaded for a write");
     }
     if (!fble_usr4_busy) {                        /* USR4's sample out of use first (editor.c ed_smp_erase) */
@@ -691,6 +692,7 @@ UI_SMALL static void fble_sysex(void)
             break;
         }
         fble = 0;
+        fble_why = "removed";
         fble_answer(5, fl_erase4k_quiet(FBLE_SEG0_OFF, &took) ? "erase failed" : "removed", 0);
         fble_usr4_busy = 0;                       /* (USR4 takes a sample again: the editor's upload) */
         break;
@@ -745,7 +747,7 @@ UI_SMALL static void fble_status_text(char *b)   /* one line: the status SysEx's
 {
     int st = fble && fble_started ? fble->state() : FBLE_OFF;
     if (!fble) {
-        fcat(fcat(b, "NO MODULE: "), fble_why);
+        fcat(fcat(b, "NO MODULE: "), fble_why ? fble_why : "none");
         return;
     }
     if (st == FBLE_READY) {
