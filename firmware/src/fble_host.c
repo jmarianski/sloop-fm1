@@ -845,7 +845,8 @@ UI_SMALL static void fble_knob(uint32_t page2, uint32_t slot, int32_t steps)
         ui_say("BLE RADIO ", !fble && on ? "ON: NO MODULE" : FB_ONOFF[on]);
         return;
     }
-    ui.arm = 0;
+    if (page2 || slot != 3u)
+        ui.arm = 0;                               /* (USE's own arm kept: its second detent confirms) */
     if (!page2 && slot == 1u) {                   /* MODE: OFF, FIRST, CHOOSE */
         int32_t v = clamp((int32_t)fb_set.central + (on ? 1 : -1), FB_C_OFF, FB_C_CHOOSE);
         if (v == fb_set.central)
